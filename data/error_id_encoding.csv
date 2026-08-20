@@ -1,0 +1,18 @@
+Char #,Describe,Define
+0,Priority,"0~2: Priority 0~2
+3~F: Reserve"
+1,Quick action,"0: No act 1: Cold Reboot 2: Warm Reboot 3: Soft power off
+4: Hard shutdown
+5: Disable component
+6: Undefined 7: Hot remove 8: Hot switch
+9~F: Reserve"
+2~3,Source,"FF: Forward from out of Etched
+00: MTS 01: SLT 02: 1X Test 03: L10 Test 04: L11 Test 05: Kayak 06: RMS 07: PDU Daemon 08: CDU Daemon
+09: BMC 0A: BIOS
+0B~FE reserve"
+4~5,Error Type,"00: Undefine 01: Initial 02: Connection 03: Provision 04: Config (HW/SW/FW) 05: Unit Test 06: Function 07: Stress 08: Sensors
+0A~FF: reserve"
+6~7,Component,"00: Undfine 01: Soho chip 02: CPU 03: DIMM 04: PDU 05: CDU 06: RMS 07: BMC 08: BIOS 09: Storage 0A: ToR Switch
+0B: Manage switch 0C: Temp 0D: Fan 0E: PSU 0F~0xFF: reserve"
+8~11,Serial number,"The serial number of error code
+From 0000~FFFF"

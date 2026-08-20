@@ -1,0 +1,77 @@
+Test Case,DRI 1,DRI 2,Status,PR
+BootloaderResultTestCase,Mykola Servetnyk,Ulysses Kao,merged,https://github.com/etched-ai/sw/pull/23002
+C2cIntegrityTestCase,Mykola Servetnyk,Ulysses Kao,merged,https://github.com/etched-ai/sw/pull/22810
+C2cLaneMarginTestCase,Mykola Servetnyk,Ulysses Kao,merged,https://github.com/etched-ai/sw/pull/22813
+C2cLinkupTestCase,Mykola Servetnyk,Ulysses Kao,merged,https://github.com/etched-ai/sw/pull/22808
+C2cPrbsLoopbackTestCase,Mykola Servetnyk,Ulysses Kao,merged,https://github.com/etched-ai/sw/pull/23117
+C2cThroughputTestCase,Mykola Servetnyk,Ulysses Kao,merged,https://github.com/etched-ai/sw/pull/22812
+CheckFirmwareVersionTestCase,Mykola Servetnyk,Ulysses Kao,,https://github.com/etched-ai/sw/pull/24591
+CheckPexFirmwareVersionTestCase,Mykola Servetnyk,Ulysses Kao,merged,https://github.com/etched-ai/sw/pull/23116
+CheckPsuHealth,Mykola Servetnyk,Ulysses Kao,merged,https://github.com/etched-ai/sw/pull/23963
+ChromaTelemetryCheckTestCase,Aidan Holm,Ulysses Kao,,
+CpldDiagnosticsTestCase,Mykola Servetnyk,Ulysses Kao,,https://github.com/etched-ai/sw/pull/24594
+DetectBoardDvfsProfileTestCase,Mykola Servetnyk,Ulysses Kao,merged,https://github.com/etched-ai/sw/pull/23003
+EvalBoardPowerTestCase,Aidan Holm,Jack Chou,,
+KayakTestCase,Aidan Holm,Jack Chou,,
+KvFlushAndAttentionInterleavedSingleChipTestCase,Aidan Holm,Jack Chou,,
+KvFlushAndAttentionSingleChipTestCase,Aidan Holm,Jack Chou,,
+LogReaderCaptureTestCase,Aidan Holm,Jack Chou,,
+MezzanineI2cAlertsTestCase,Aidan Holm,Jack Chou,,
+PcieRescanTestCase,Ulysses Kao,Mykola Servetnyk,,https://github.com/etched-ai/sw/pull/22868
+PcieSetupTestCase,Aidan Holm,Jack Chou,,
+PcieTeardownTestCase,Aidan Holm,Jack Chou,,
+ProgramSecureBootloaderTestCase,Aidan Holm,Jack Chou,,
+PublishBootloaderTypeTestCase,Aidan Holm,Jack Chou,,
+ReloadKernelModuleTestCase,Aidan Holm,Jack Chou,,
+RetimerFirmwareUpdateTestCase,Aidan Holm,Jack Chou,,
+RunAllAttnHbmBypassTestsSingleChipTestCase,Sam Jiang,James Chou,In review,https://github.com/etched-ai/sw/pull/22847
+RunAllAttnTestsSingleChipTestCase,Sam Jiang,James Chou,In review,https://github.com/etched-ai/sw/pull/22838
+RunKvFlushTestsSingleChipTestCase,Sam Jiang,James Chou,In review,https://github.com/etched-ai/sw/pull/22839
+SaSortRampupHbmSingleChipTestCase,Sam Jiang,James Chou,In review,https://github.com/etched-ai/sw/pull/22840
+ServerNestedTestCase,Ulysses Kao,Mykola Servetnyk,,https://github.com/etched-ai/sw/pull/22859
+SetSkipFlrOnOpenCloseTestCase,Sam Jiang,James Chou,In review,https://github.com/etched-ai/sw/pull/22846
+SltModuleNestedTestCase,Ulysses Kao,Mykola Servetnyk,,https://github.com/etched-ai/sw/pull/22863
+SohuBusConnectivityTestCase,Sam Jiang,James Chou,In review,https://github.com/etched-ai/sw/pull/22841
+SohuChipBinTestCase,Ulysses Kao,Mykola Servetnyk,,https://github.com/etched-ai/sw/pull/22865
+SohuChipIdTestCase,Sam Jiang,James Chou,In review,https://github.com/etched-ai/sw/pull/22842
+SohuCtsTestCase,Sam Jiang,James Chou,In review,https://github.com/etched-ai/sw/pull/22843
+SohuDmaTestCase,Sam Jiang,James Chou,In review,https://github.com/etched-ai/sw/pull/22811
+SohuDtsTestCase,Sam Jiang,James Chou,In review,https://github.com/etched-ai/sw/pull/22844
+SohuEfuseTestCase,Sam Jiang,James Chou,In review,https://github.com/etched-ai/sw/pull/22845
+SohuFirmwareUpdateTestCase,Mykola Servetnyk,James Chou,merged,"https://github.com/etched-ai/sw/pull/22816/ , https://github.com/etched-ai/sw/pull/22817"
+SohuFlrTestCase,James Chou,Aidan Holm,In review,https://github.com/etched-ai/sw/pull/22807
+SohuGpioTestCase,James Chou,Aidan Holm,In review,https://github.com/etched-ai/sw/pull/22801
+SohuHbmBandwidthTestCase,James Chou,Aidan Holm,In review,https://github.com/etched-ai/sw/pull/22819
+SohuHbmDeviceIdTestCase,James Chou,Aidan Holm,In review,https://github.com/etched-ai/sw/pull/22805
+SohuHotReloadFirmwareUpdateTestCase,James Chou,Aidan Holm,,https://github.com/etched-ai/sw/pull/22820
+SohuI2cTestCase,James Chou,Aidan Holm,In review,https://github.com/etched-ai/sw/pull/22800
+SohuJtagTestCase,James Chou,Aidan Holm,In review,https://github.com/etched-ai/sw/pull/22802
+SohuLaneRepairTestCase,James Chou,Aidan Holm,,https://github.com/etched-ai/sw/pull/22806
+SohuLlama8bFp8ForwardTestCase,Aidan Holm,James Chou,,
+SohuLlama8bFp8PrefillTestCase,Aidan Holm,James Chou,,
+SohuLlamaMttTestCase,James Chou,Aidan Holm,,https://github.com/etched-ai/sw/pull/22827
+SohuLogReaderActivateTestCase,James Chou,Aidan Holm,In review,https://github.com/etched-ai/sw/pull/22804
+SohuMtcStressTestCase,Jack Chou,Sam Jiang,,https://github.com/etched-ai/sw/pull/22899
+SohuPcieAerCheckTestCase,Jack Chou,Sam Jiang,,https://github.com/etched-ai/sw/pull/22892
+SohuPcieCsramThroughputTestCase,Jack Chou,Sam Jiang,,https://github.com/etched-ai/sw/pull/22890
+SohuPcieLaneMarginTestCase,Jack Chou,Sam Jiang,,https://github.com/etched-ai/sw/pull/22889
+SohuPcieRateChangeTestCase,Jack Chou,Sam Jiang,,https://github.com/etched-ai/sw/pull/22893
+SohuPdTestCase,Jack Chou,Sam Jiang,,https://github.com/etched-ai/sw/pull/22898
+SohuPmbistTestCase,Jack Chou,Sam Jiang,,https://github.com/etched-ai/sw/pull/22891
+SohuPowerTelemetryTestCase,Jack Chou,Sam Jiang,,https://github.com/etched-ai/sw/pull/22897
+SohuPowerVirusTestCase,Jack Chou,Sam Jiang,,https://github.com/etched-ai/sw/pull/22895
+SohuPowerVirusThermalTestCase,Jack Chou,Sam Jiang,,https://github.com/etched-ai/sw/pull/22894
+SohuRdqsSweepTrainingTestCase,Jack Chou,Sam Jiang,,https://github.com/etched-ai/sw/pull/22888
+SohuSaScreeningTestCase,Jack Chou,Sam Jiang,,https://github.com/etched-ai/sw/pull/22896
+SohuSauPllPhaseAlignmentTestCase,Ulysses Kao,Mykola Servetnyk,,https://github.com/etched-ai/sw/pull/22803
+SohuSecureBootRecoveryUpdateTestCase,Ulysses Kao,Mykola Servetnyk,,https://github.com/etched-ai/sw/pull/22809
+SohuSnapTestCase,Ulysses Kao,Mykola Servetnyk,,https://github.com/etched-ai/sw/pull/22866
+SohuSramMemoryTestCase,Ulysses Kao,Mykola Servetnyk,,https://github.com/etched-ai/sw/pull/22828
+SohuThermalDiodeTestCase,Ulysses Kao,Mykola Servetnyk,,https://github.com/etched-ai/sw/pull/22830
+SohuUartTestCase,Ulysses Kao,Mykola Servetnyk,,https://github.com/etched-ai/sw/pull/22851
+SohuVfioPingTestCase,Ulysses Kao,Mykola Servetnyk,,https://github.com/etched-ai/sw/pull/22853
+SohuVmTestCase,Ulysses Kao,Mykola Servetnyk,,https://github.com/etched-ai/sw/pull/22854
+SohuVrmTestCase,Ulysses Kao,Mykola Servetnyk,,https://github.com/etched-ai/sw/pull/22855
+SohuWeightLoadTestCase,Ulysses Kao,Mykola Servetnyk,,https://github.com/etched-ai/sw/pull/22856
+VbbFirmwareUpdateTestCase,Ulysses Kao,Mykola Servetnyk,,https://github.com/etched-ai/sw/pull/22858
+VfioProxyVersionTestCase,Ulysses Kao,Mykola Servetnyk,,https://github.com/etched-ai/sw/pull/22860

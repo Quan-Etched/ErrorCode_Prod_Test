@@ -1,0 +1,15 @@
+Field,Describe
+Error Code ID,The key ID of Error code
+Message,The possible error message
+Quick_Action,How does the user or operate handle this issues immediately
+Recover_Step,Detail recover steps for this error
+Source,Error from which test or software
+Error_Type,Error types
+Component,Relative components
+Test_Case,"Jira IDs of test cases, allow multiple IDs, separate by “,”"
+Bugs,"Jira IDs of bugs, allow multiple IDs, separate by “,”"
+Count,Count of happen
+Last_happen,Datetime of last happen
+Char #,0
+Describe,Priority
+Define,0~2: Priority 0~2  3~F: Reserve

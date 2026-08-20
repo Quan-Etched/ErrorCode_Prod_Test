@@ -11,12 +11,15 @@ Sources
 Field naming and enum values follow th_registry.yaml (TH Error Code
 Specification v0.3 GBP7, GBP11.1).
 """
-import html, os, re, sys, yaml
+import csv, html, os, re, sys, yaml
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 SHEET = os.path.join(HERE, 'sheet.md')
 REGISTRY = os.path.join(HERE, 'th_registry.yaml')
 OUT = os.path.join(HERE, 'index.html')
+XLSX = os.path.join(HERE, 'etched_error_code.xlsx')
+XLSX_NAME = os.path.basename(XLSX)
+DATA_DIR = os.path.join(HERE, 'data')
 
 # ---------------------------------------------------------------- enum legends
 # Straight from th_registry.yaml inline comments.
@@ -259,7 +262,10 @@ def code_table(recs, show_packed=False, show_root=False):
         tds.append(f'<td class="id" id="{esc(anchor)}">{link}{reg_mark}</td>')
         if show_packed:
             tds.append(f'<td class="num"><code>{esc(r["packed"]) or "—"}</code></td>')
-        tds.append(f'<td class="num"><span class="badge ver">v{esc(r["version"])}</span></td>')
+        vt = ('version: in th_registry.yaml' if r['in_registry']
+              else 'not in th_registry.yaml yet; first revision by definition')
+        tds.append(f'<td class="num"><span class="badge ver" title="{esc(vt)}">'
+                   f'v{esc(r["version"])}</span></td>')
         tds.append(f'<td class="num">{esc(r["doc_rev"])}</td>')
         tds.append(f'<td class="who" title="{esc(r["author_basis"])}">{esc(r["author"])}</td>')
         tds.append(f'<td><code class="nm">{esc(r["name"]) or "—"}</code></td>')
@@ -336,6 +342,169 @@ if COLLISIONS:
         'and the other is listed here for reconciliation in the sheet.</p>' + collision_html)
 else:
     collision_html = '<p>No duplicate Error Code IDs within a stage block.</p>'
+
+
+# ------------------------------------------------------------------- exports
+# The maintainable copy of the sheet: one worksheet per source tab, plus a CSV
+# of each so git can diff revisions. Regenerated from sheet.md + the registry,
+# NOT a copy of the Drive binary (Drive binary export is not reachable here).
+CODE_COLS = [
+    ('Error Code ID', lambda r: r['code']),
+    ('Packed', lambda r: r['packed']),
+    ('Version', lambda r: r['version']),
+    ('Doc Rev', lambda r: r['doc_rev']),
+    ('Original Author', lambda r: r['author']),
+    ('Author Basis', lambda r: r['author_basis']),
+    ('DRI 2', lambda r: r['dri2']),
+    ('Name', lambda r: r['name']),
+    ('Message', lambda r: r['message']),
+    ('Severity', lambda r: r['severity']),
+    ('Severity Name', lambda r: SEVERITY.get(r['severity'], '')),
+    ('Quick Action', lambda r: r['qa']),
+    ('Quick Action Name', lambda r: QUICK_ACTION.get(r['qa'], '')),
+    ('Quick Action (sheet)', lambda r: r['quick_action_txt']),
+    ('Recover / Troubleshooting Procedure', lambda r: r['procedure']),
+    ('Error Type', lambda r: r['error_type']),
+    ('Category', lambda r: r['category']),
+    ('Category Name', lambda r: CATEGORY.get(r['category'], '')),
+    ('Component', lambda r: r['component']),
+    ('Test Case', lambda r: ', '.join(r['test_cases'])),
+    ('Source', lambda r: r['source']),
+    ('Possible Root Cause', lambda r: r['root_cause']),
+    ('Bugs', lambda r: r['bugs']),
+    ('Owner', lambda r: r['owner']),
+    ('Since', lambda r: r['since']),
+    ('Disposition', lambda r: r['disposition']),
+    ('Retryable', lambda r: r['retryable']),
+    ('In th_registry.yaml', lambda r: 'yes' if r['in_registry'] else 'no'),
+    ('Merged Duplicate', lambda r: 'yes' if r.get('dup') else ''),
+    ('Doc URL', lambda r: r['doc_url']),
+]
+
+def code_sheet(recs):
+    """Drop columns that are empty for every row in this stage."""
+    cols = [(h, f) for h, f in CODE_COLS
+            if any(str(f(r) or '').strip() for r in recs)]
+    return [h for h, _ in cols], [[f(r) for _, f in cols] for r in recs]
+
+def plain(rows, keys):
+    return [[r.get(k, '') for k in keys] for r in rows]
+
+def workbook_tabs():
+    tabs = []
+    tabs.append(('Revision History', ['Version', 'Comment', 'Author'],
+                 plain(sorted(revisions,
+                              key=lambda r: [int(p) for p in r['Version'].split('.')]),
+                       ['Version', 'Comment', 'Author'])))
+    for name, recs in (('MLT 1X', mlt), ('L10', l10), ('L11', l11)):
+        hdr, rows = code_sheet(recs)
+        tabs.append((name, hdr, rows))
+    tabs.append(('Field Definitions', ['Field', 'Describe'],
+                 [[r['Field'], r['Describe']] for r in field_defs]))
+    if bit_rows:
+        tabs.append(('Error ID Encoding', ['Char #', 'Describe', 'Define'],
+                     [[re.sub('<[^>]+>', '', c.replace('<br>', '\n')) for c in row]
+                      for row in bit_rows]))
+    tabs.append(('DRI Ownership', ['Test Case', 'DRI 1', 'DRI 2', 'Status', 'PR'],
+                 [[tc, d['dri1'], d['dri2'], d['status'], d['pr']]
+                  for tc, d in sorted(DRI.items())]))
+    if COLLISIONS:
+        tabs.append(('Source Data Notes',
+                     ['Error Code ID', 'Stage', 'Quick action kept',
+                      'Quick action dropped', 'Dropped row message',
+                      'Dropped row test cases'],
+                     [[c['code'], c['stage'], c['kept'], c['dropped'],
+                       c['dropped_msg'], c['dropped_cases']]
+                      for c in sorted(COLLISIONS, key=lambda c: c['code'])]))
+    tabs.append(('Enum Legends', ['Field', 'Value', 'Name'],
+                 [['category', k, v] for k, v in sorted(CATEGORY.items())] +
+                 [['severity', k, v] for k, v in sorted(SEVERITY.items())] +
+                 [['quick_action', k, v] for k, v in sorted(QUICK_ACTION.items())]))
+    return tabs
+
+TABS = workbook_tabs()
+
+def slug(name):
+    return re.sub(r'[^a-z0-9]+', '_', name.lower()).strip('_')
+
+def write_csvs(tabs):
+    os.makedirs(DATA_DIR, exist_ok=True)
+    written = []
+    for name, hdr, rows in tabs:
+        path = os.path.join(DATA_DIR, slug(name) + '.csv')
+        with open(path, 'w', newline='') as fh:
+            w = csv.writer(fh)
+            w.writerow(hdr)
+            for r in rows:
+                w.writerow(['' if c is None else c for c in r])
+        written.append((os.path.basename(path), name, len(rows)))
+    return written
+
+def write_xlsx(tabs):
+    try:
+        from openpyxl import Workbook
+        from openpyxl.styles import Alignment, Font, PatternFill
+        from openpyxl.utils import get_column_letter
+    except ImportError:
+        print('openpyxl not installed - skipping', XLSX_NAME, file=sys.stderr)
+        return False
+    wb = Workbook()
+    wb.remove(wb.active)
+    head_font = Font(bold=True, color='FFFFFF')
+    head_fill = PatternFill('solid', fgColor='3C4450')
+    wrap = Alignment(vertical='top', wrap_text=True)
+    top = Alignment(vertical='top')
+    for name, hdr, rows in tabs:
+        ws = wb.create_sheet(name[:31])
+        ws.append(hdr)
+        for r in rows:
+            ws.append(['' if c is None else c for c in r])
+        for c in ws[1]:
+            c.font, c.fill = head_font, head_fill
+            c.alignment = Alignment(vertical='center', wrap_text=True)
+        ws.freeze_panes = 'A2'
+        if rows:
+            ws.auto_filter.ref = (f'A1:{get_column_letter(len(hdr))}{len(rows) + 1}')
+        for i, h in enumerate(hdr, start=1):
+            widest = max([len(str(h))] + [len(str(r[i - 1])) for r in rows if i <= len(r)])
+            width = min(max(widest + 2, 10), 60)
+            ws.column_dimensions[get_column_letter(i)].width = width
+            for cell in ws[get_column_letter(i)][1:]:
+                cell.alignment = wrap if width >= 40 else top
+        ws.row_dimensions[1].height = 30
+    wb.save(XLSX)
+    return True
+
+csvs = write_csvs(TABS)
+ok = write_xlsx(TABS)
+print(f'wrote {len(csvs)} CSVs in data/' + (f' and {XLSX_NAME}' if ok else ''))
+for fn, name, n in csvs:
+    print(f'  data/{fn:<28} {name} ({n} rows)')
+
+
+def human(path):
+    n = os.path.getsize(path)
+    return f'{n / 1024:.0f} KB' if n < 1024 * 1024 else f'{n / 1048576:.1f} MB'
+
+
+download_rows = [
+    [f'<a href="{XLSX_NAME}"><strong>{XLSX_NAME}</strong></a>' if ok else
+     f'<code>{XLSX_NAME}</code>',
+     'Excel workbook &mdash; one sheet per source tab, filters and frozen headers on. '
+     'The editable copy: change it, commit it, regenerate.',
+     human(XLSX) if ok else '&mdash;'],
+    ['<code>data/</code><br>' + '<br>'.join(
+         f'<a href="data/{fn}">{fn}</a>' for fn, _, _ in csvs),
+     f'The same {len(csvs)} tabs as CSV, one file per tab &mdash; so git diffs a revision '
+     'line by line instead of as a binary blob.',
+     f'{len(csvs)} files'],
+    ['<a href="sheet.md">sheet.md</a>',
+     'Verbatim export of the Google Sheet the tables were built from.',
+     human(SHEET)],
+    ['<a href="th_registry.yaml">th_registry.yaml</a>',
+     'Snapshot of the source of truth from <code>etched-ai/sw@master</code>.',
+     human(REGISTRY)],
+]
 
 
 def stat(n, label):
@@ -430,6 +599,12 @@ with revision history and original author per code. Field names and enum values 
 never reuse a code &mdash; a change of meaning requires a new code. The <code>-S<em>x</em>Q<em>y</em></code>
 suffix carries severity and quick action; the stable identity is the <code>TH-&lt;BLOCK&gt;-&lt;NNNN&gt;</code> prefix.
 </div>
+
+{section('Download the source workbook', 'download',
+         kv_table([[a, b, c] for a, b, c in download_rows],
+                  ['File', 'What it is', 'Size']),
+         'Everything on this page is generated from the two snapshots at the bottom '
+         'of this list. Edit the workbook, commit it, re-run <code>gen.py</code>.')}
 
 {section('Revision history', 'revisions',
          kv_table(rev_rows, ['Version', 'Comment', 'Author']),

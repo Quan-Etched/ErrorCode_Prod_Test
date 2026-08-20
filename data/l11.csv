@@ -1,0 +1,62 @@
+Error Code ID,Version,Doc Rev,Original Author,Author Basis,Message,Quick Action (sheet),Recover / Troubleshooting Procedure,Error Type,Component,Test Case,Source,In th_registry.yaml
+EC-16060a0a003f,1,0.3,Ulysses Kao,spec author (no DRI listed),ToR redundancy failed (aggregate),Undefined,See enumerated sub-failures,Function,ToR Switch,TorSwitchRedundancyTestCase,L11 Test,no
+EC-16060b0b003a,1,0.3,Ulysses Kao,spec author (no DRI listed),Mgmt switch redundancy failed (aggregate),Undefined,See enumerated sub-failures,Function,Mgmt switch,MgmtSwitchRedundancyTestCase,L11 Test,no
+EC-160401000009,1,0.3,Ulysses Kao,spec author (no DRI listed),Resource not SSH,Undefined,Fix resource config,Initial,Undefined,PingAllP2pPairsTestCase,L11 Test,no
+EC-16040106000d,1,0.3,Ulysses Kao,spec author (no DRI listed),Primary RMS provision: no ssh_target,Undefined,Set ssh_target in suite,Initial,RMS,ProvisionPrimaryRms,L11 Test,no
+EC-160401060015,1,0.3,Ulysses Kao,spec author (no DRI listed),Provision CDU/PDU/compute/RMS2: no ssh,Undefined,Set ssh_target,Initial,RMS,"ProvisionCdu, ProvisionPdu, ProvisionComputeServer, ProvisionRedundantRms",L11 Test,no
+EC-16040106001f,1,0.3,Ulysses Kao,spec author (no DRI listed),CDU/PDU health: no ssh_target,Undefined,Set suite ssh_target,Initial,RMS,"CduHealthCheckTestCase, PduHealthCheckTestCase",L11 Test,no
+EC-160401070030,1,0.3,Ulysses Kao,spec author (no DRI listed),BMC power-cycle wrapper: no ssh_target,Undefined,Point ssh at RMS,Initial,BMC,SohuServerBmcPowerCycle,L11 Test,no
+EC-160401070033,1,0.3,Ulysses Kao,spec author (no DRI listed),Firmware check: no ssh_target,Undefined,Point ssh at RMS,Initial,BMC,SohuServerFirmwareInventoryCheck,L11 Test,no
+EC-160402000001,1,0.3,Ulysses Kao,spec author (no DRI listed),Runner date failed,Undefined,Fix runner shell / harness,Connection,Undefined,CheckSystemClockTestCase,L11 Test,no
+EC-16040200000a,1,0.3,Ulysses Kao,spec author (no DRI listed),SSH resource missing,Undefined,Fix keys / inventory,Connection,Undefined,PingAllP2pPairsTestCase,L11 Test,no
+EC-16040200000b,1,0.3,Ulysses Kao,spec author (no DRI listed),SSH resource open error,Undefined,Undefined connection / fix RM,Connection,Undefined,PingAllP2pPairsTestCase,L11 Test,no
+EC-16040200000c,1,0.3,Ulysses Kao,spec author (no DRI listed),Ping mesh failure,Undefined,Fix L3 / bonds / switches,Connection,Undefined,PingAllP2pPairsTestCase,L11 Test,no
+EC-160402020032,1,0.3,Ulysses Kao,spec author (no DRI listed),Host SSH not up after power-on,Undefined,OS / network / sshd,Connection,CPU,SohuServerBmcPowerCycle,L11 Test,no
+EC-160402040019,1,0.3,Ulysses Kao,spec author (no DRI listed),PDU unreachable (ping),Undefined,PDU network / power,Connection,PDU,ProvisionPdu,L11 Test,no
+EC-160402050018,1,0.3,Ulysses Kao,spec author (no DRI listed),CDU unreachable (ping),Undefined,CDU network / power,Connection,CDU,ProvisionCdu,L11 Test,no
+EC-160402060003,1,0.3,Ulysses Kao,spec author (no DRI listed),RMS date over SSH failed,Undefined,Check RMS SSH / routing,Connection,RMS,CheckSystemClockTestCase,L11 Test,no
+EC-160402060013,1,0.3,Ulysses Kao,spec author (no DRI listed),MTS apt proxy unreachable locally,Undefined,Start / fix apt proxy,Connection,RMS,ProvisionPrimaryRms,L11 Test,no
+EC-160402060014,1,0.3,Ulysses Kao,spec author (no DRI listed),RMS cannot reach apt proxy,Undefined,Routing / firewall to proxy,Connection,RMS,ProvisionPrimaryRms,L11 Test,no
+EC-1604020a002a,1,0.3,Ulysses Kao,spec author (no DRI listed),Switch eAPI curl failed,Undefined,Fix switch mgmt / creds,Connection,ToR Switch,"SwitchInventoryCheckTestCase, MgmtSwitchRedundancyTestCase",L11 Test,no
+EC-16040302001d,1,0.3,Ulysses Kao,spec author (no DRI listed),Compute server provisioning failed,Undefined,RC provision logs,Provision,CPU,ProvisionComputeServer,L11 Test,no
+EC-160403060010,1,0.3,Ulysses Kao,spec author (no DRI listed),Ansible playbook failed,Undefined,Read ansible artifacts / logs,Provision,RMS,ProvisionPrimaryRms,L11 Test,no
+EC-160403060011,1,0.3,Ulysses Kao,spec author (no DRI listed),Image import to RMS failed,Undefined,Check microk8s / disk on RMS,Provision,RMS,ProvisionPrimaryRms,L11 Test,no
+EC-160403060012,1,0.3,Ulysses Kao,spec author (no DRI listed),Cleanup of images failed,Undefined,SSH / permissions on RMS,Provision,RMS,ProvisionPrimaryRms,L11 Test,no
+EC-16040306001a,1,0.3,Ulysses Kao,spec author (no DRI listed),Rack-controller provisioning task failed,Undefined,RC logs / rack controller,Provision,RMS,"ProvisionCdu, ProvisionPdu, ProvisionRedundantRms",L11 Test,no
+EC-1604030b0006,1,0.3,Ulysses Kao,spec author (no DRI listed),ZTP container start failed,Undefined,Check ZTP service on RMS,Provision,Mgmt switch,SwitchZtpTriggerTestCase,L11 Test,no
+EC-1604030b0007,1,0.3,Ulysses Kao,spec author (no DRI listed),ZTP container stop failed,Undefined,Inspect ZTP logs / daemon,Provision,Mgmt switch,SwitchZtpTriggerTestCase,L11 Test,no
+EC-160404020035,1,0.3,Ulysses Kao,spec author (no DRI listed),Per-server BOM scope: missing server_id,Undefined,Pass server_id in suite,Config,CPU,_SohuServerScopedBomMixin,L11 Test,no
+EC-160404040023,1,0.3,Ulysses Kao,spec author (no DRI listed),PDU resource not PduConnection,Undefined,Fix PDU resource entry,Config,PDU,"PduHealthCheckTestCase, PduInventoryCheckTestCase",L11 Test,no
+EC-16040404002e,1,0.3,Ulysses Kao,spec author (no DRI listed),No PDU in BOM,Undefined,Fix BOM,Config,PDU,PduInventoryCheckTestCase,L11 Test,no
+EC-160404040039,1,0.3,Ulysses Kao,spec author (no DRI listed),PDU resource invalid for redundancy test,Undefined,Fix pdu_target resource,Config,PDU,MgmtSwitchRedundancyTestCase,L11 Test,no
+EC-16040404003e,1,0.3,Ulysses Kao,spec author (no DRI listed),PDU resource invalid for ToR test,Undefined,Fix pdu_target resource,Config,PDU,TorSwitchRedundancyTestCase,L11 Test,no
+EC-160404050017,1,0.3,Ulysses Kao,spec author (no DRI listed),CDU interface / entity mismatch,Undefined,Fix CDU hostname in registry,Config,CDU,ProvisionCdu,L11 Test,no
+EC-160404050022,1,0.3,Ulysses Kao,spec author (no DRI listed),CDU resource not CduConnection,Undefined,Fix CDU resource entry,Config,CDU,"CduHealthCheckTestCase, CduInventoryCheckTestCase",L11 Test,no
+EC-16040405002c,1,0.3,Ulysses Kao,spec author (no DRI listed),No CDU in BOM,Undefined,Fix BOM,Config,CDU,CduInventoryCheckTestCase,L11 Test,no
+EC-160404060005,1,0.3,Ulysses Kao,spec author (no DRI listed),Clock skew over tolerance,Undefined,Fix NTP / time sync,Config,RMS,CheckSystemClockTestCase,L11 Test,no
+EC-16040406000e,1,0.3,Ulysses Kao,spec author (no DRI listed),Vault / inputs validation failed,Undefined,Fix l11_inputs / vault file,Config,RMS,ProvisionPrimaryRms,L11 Test,no
+EC-16040406000f,1,0.3,Ulysses Kao,spec author (no DRI listed),No provisioning images found,Undefined,Restore deploy image tarball,Config,RMS,ProvisionPrimaryRms,L11 Test,no
+EC-160404060016,1,0.3,Ulysses Kao,spec author (no DRI listed),Unknown rack entity,Undefined,Fix rack_entities / IDs,Config,RMS,"ProvisionCdu, ProvisionPdu",L11 Test,no
+EC-16040406001e,1,0.3,Ulysses Kao,spec author (no DRI listed),Redundant RMS vault/data error,Undefined,Fix vault inputs,Config,RMS,ProvisionRedundantRms,L11 Test,no
+EC-160404060020,1,0.3,Ulysses Kao,spec author (no DRI listed),RMS SSH resource wrong type,Undefined,Fix resource YAML,Config,RMS,"CduHealthCheckTestCase, PduHealthCheckTestCase",L11 Test,no
+EC-160404060021,1,0.3,Ulysses Kao,spec author (no DRI listed),Rack controller port missing,Undefined,Add RC port to resources,Config,RMS,"CduHealthCheckTestCase, PduHealthCheckTestCase",L11 Test,no
+EC-160404060028,1,0.3,Ulysses Kao,spec author (no DRI listed),RMS BOM missing,Undefined,Fix BOM YAML,Config,RMS,RmsInventoryCheckTestCase,L11 Test,no
+EC-160404060029,1,0.3,Ulysses Kao,spec author (no DRI listed),RMS inventory mismatch,Undefined,Replace HW / fix BOM,Config,RMS,RmsInventoryCheckTestCase,L11 Test,no
+EC-160404070034,1,0.3,Ulysses Kao,spec author (no DRI listed),Firmware version mismatch,Undefined,Update BMC/BIOS/PSU FW,Config,BMC,SohuServerFirmwareInventoryCheck,L11 Test,no
+EC-1604040a002b,1,0.3,Ulysses Kao,spec author (no DRI listed),Switch BOM mismatch,Undefined,Replace switch / BOM,Config,ToR Switch,SwitchInventoryCheckTestCase,L11 Test,no
+EC-1604040a003b,1,0.3,Ulysses Kao,spec author (no DRI listed),No ToR switches in registry,Undefined,Fix registry accessors,Config,ToR Switch,TorSwitchRedundancyTestCase,L11 Test,no
+EC-1604040a003c,1,0.3,Ulysses Kao,spec author (no DRI listed),ToR switch ID not in registry,Undefined,Fix rack_entities.txtpb,Config,ToR Switch,TorSwitchRedundancyTestCase,L11 Test,no
+EC-1604040a003d,1,0.3,Ulysses Kao,spec author (no DRI listed),ToR switch lacks pdu_connections,Undefined,Fix PDU outlet mapping,Config,ToR Switch,TorSwitchRedundancyTestCase,L11 Test,no
+EC-1604040b0036,1,0.3,Ulysses Kao,spec author (no DRI listed),Mgmt switch ID not in registry,Undefined,Fix rack_entities.txtpb,Config,Mgmt switch,MgmtSwitchRedundancyTestCase,L11 Test,no
+EC-1604040b0037,1,0.3,Ulysses Kao,spec author (no DRI listed),Mgmt switch lacks pdu_connections,Undefined,Fix PDU outlet mapping,Config,Mgmt switch,MgmtSwitchRedundancyTestCase,L11 Test,no
+EC-1604040b0038,1,0.3,Ulysses Kao,spec author (no DRI listed),Cannot resolve mgmt switch peer,Undefined,Expect two mgmt switches,Config,Mgmt switch,MgmtSwitchRedundancyTestCase,L11 Test,no
+EC-160406000002,1,0.3,Ulysses Kao,spec author (no DRI listed),Runner epoch parse failed,Undefined,Fix runner clock output,Function,Undefined,CheckSystemClockTestCase,L11 Test,no
+EC-160406000008,1,0.3,Ulysses Kao,spec author (no DRI listed),Need ≥2 ping targets,Undefined,Fix suite ping_targets,Function,Undefined,PingAllP2pPairsTestCase,L11 Test,no
+EC-160406060004,1,0.3,Ulysses Kao,spec author (no DRI listed),RMS epoch parse failed,Undefined,Fix RMS clock output,Function,RMS,CheckSystemClockTestCase,L11 Test,no
+EC-16060504001c,1,0.3,Ulysses Kao,spec author (no DRI listed),PDU post-provision health bad,Undefined,PDU telemetry / RC state,Function,PDU,ProvisionPdu,L11 Test,no
+EC-160605040025,1,0.3,Ulysses Kao,spec author (no DRI listed),PDU health aggregate failure,Undefined,See per-line daemon logs,Function,PDU,PduHealthCheckTestCase,L11 Test,no
+EC-16060504002f,1,0.3,Ulysses Kao,spec author (no DRI listed),PDU inventory mismatch,Undefined,Fix PDU vs BOM,Function,PDU,PduInventoryCheckTestCase,L11 Test,no
+EC-16060505001b,1,0.3,Ulysses Kao,spec author (no DRI listed),CDU post-provision health bad,Undefined,CDU telemetry / RC state,Function,CDU,ProvisionCdu,L11 Test,no
+EC-160605050024,1,0.3,Ulysses Kao,spec author (no DRI listed),CDU health aggregate failure,Undefined,See per-line daemon logs,Function,CDU,CduHealthCheckTestCase,L11 Test,no
+EC-16060505002d,1,0.3,Ulysses Kao,spec author (no DRI listed),CDU inventory mismatch,Undefined,Fix CDU vs BOM,Function,CDU,CduInventoryCheckTestCase,L11 Test,no
+EC-160607070031,1,0.3,Ulysses Kao,spec author (no DRI listed),BMC power-cycle sequence failed,Undefined,BMC / bmc-daemon logs,Function,BMC,SohuServerBmcPowerCycle,L11 Test,no
