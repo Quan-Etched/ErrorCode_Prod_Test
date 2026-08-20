@@ -1,4 +1,4 @@
-# 32x-error-code
+# 32x-error-code &middot; v0.1
 
 GitHub version of the Etched error-code table (`_Etched Error Code` spreadsheet),
 rendered as a single HTML page and published on GitHub Pages:
@@ -9,9 +9,18 @@ The site is a *private* Pages site — visible to Etched org members with read a
 to this repo, not to the public. The obfuscated hostname is how GitHub serves
 private Pages; it does not change when the site rebuilds.
 
-The page carries a **Download the source workbook** section at the top:
-[`etched_error_code.xlsx`](etched_error_code.xlsx) is the editable copy of the
-whole sheet, one worksheet per source tab.
+The page opens with a metadata box (version, this repo, the original spreadsheet
+URL, the Slack channel, source of truth, owner) and a **Download the source
+workbook** section.
+
+| | |
+| --- | --- |
+| **Version** | v0.1 of this repo and page; source spreadsheet revision 0.3; every code at `version: 1` |
+| **Repository** | <https://github.com/etched-ai/32x-error-code> |
+| **Published at** | <https://fantastic-telegram-38n6vyw.pages.github.io/> (private) |
+| **Original spreadsheet** | [_Etched Error Code](https://docs.google.com/spreadsheets/d/1zKcxEXyYFLAQkI0AnVtZnSQ7Z-sxGqzGBpc9-0qhrqk/edit?gid=1353335746) |
+| **Slack** | [#error-code-define](https://etchedai.slack.com/archives/C0B299EA7UK) · [#tiger-error-code](https://etchedai.slack.com/archives/C0BMBRF327R) |
+| **Owner** | `supercomputing-sw` |
 
 Every error code is listed with its **version** and **original author**, organized
 with the field names and enum values of the source of truth:
@@ -26,22 +35,35 @@ ascending within each stage.
 | File | What it is |
 | --- | --- |
 | `index.html` | Published page: download links, revision history, field definitions, `EC-` bitfield encoding, enum legends, the MLT/1X, L10 and L11 code tables, DRI ownership, source notes |
-| `etched_error_code.xlsx` | The maintainable workbook — 9 sheets, one per source tab, with autofilters and frozen headers. Downloadable from the page |
-| `data/*.csv` | The same 9 tabs as CSV, one file per tab, so git diffs a revision line by line instead of as a binary blob |
+| `etched_error_code.xlsx` | **The source workbook** — a mirror of the original spreadsheet: same 7 tabs in the same order, same columns, same rows, nothing added or reordered. The file to edit and commit |
+| `etched_error_code_annotated.xlsx` | The same data plus everything the page joins in (version, original author, severity/quick-action names, owner, `since`, registry status), with autofilters and frozen headers |
+| `data/source/*.csv` | Each source tab as CSV, verbatim — the diffable form of the source workbook |
+| `data/*.csv` | The 9 joined tabs as CSV, so git diffs a revision line by line instead of as a binary blob |
 | `gen.py` | Generator — rebuilds `index.html`, the workbook and the CSVs from the two snapshots below |
 | `th_registry.yaml` | Snapshot of the source of truth from `etched-ai/sw@master` |
 | `sheet.md` | Snapshot of the `_Etched Error Code` spreadsheet export the tables were built from |
 | `.nojekyll` | Serves `data/` and every file verbatim on Pages, no Jekyll processing |
 
-### A note on the workbook
+### How close `etched_error_code.xlsx` is to the original
 
-`etched_error_code.xlsx` is **regenerated from the sheet export**, not a copy of the
-Drive binary — Drive's binary export is not reachable from this tooling
-(`?format=xlsx` returns 401 without an interactive session). Content matches
-`sheet.md` plus everything joined in from `th_registry.yaml`; cell formatting and
-formulas from the original Google Sheet are not carried over. To capture the true
-original instead, download it manually from the sheet
-(File → Download → Microsoft Excel) and commit it over this file.
+It is **rebuilt from the sheet export, not a copy of the Drive binary** — Drive's
+binary export is not reachable from this tooling (`?format=xlsx` returns 401
+without an interactive session). What that buys and what it costs:
+
+- **Identical** — the grid. 7 tabs in source order, original column count and
+  order, original header rows, every row including the leading blank ones,
+  every cell value verbatim. Verified cell-for-cell against the export: 4,235
+  cells, 0 differences. Numbers (e.g. the `Packed` column) are written as
+  numbers; `0.1` and `00: Undefine` stay text, as in the sheet.
+- **Not carried over** — anything the markdown export drops: cell formatting,
+  fills, merged cells, column widths, formulas, data validation, notes,
+  conditional formatting, filter views, and the real tab names. Tab names here
+  are named after their content in source order; if the originals differ, fix
+  `SOURCE_TABS` in `gen.py`.
+
+To get a byte-exact original, download it from the sheet (File → Download →
+Microsoft Excel) and commit it over this file; `gen.py` will still regenerate
+everything else from `sheet.md`.
 
 ## Regenerating
 
@@ -53,9 +75,10 @@ gh api repos/etched-ai/sw/contents/host/system_test/error_codes/th_registry.yaml
 python3 gen.py          # needs pyyaml + openpyxl
 ```
 
-`gen.py` writes `index.html`, `etched_error_code.xlsx` and `data/*.csv` next to
-itself; run it from the repo root with `sheet.md` and `th_registry.yaml` beside it.
-Committing to `master` republishes the Pages site.
+`gen.py` writes `index.html`, both workbooks and `data/**.csv` next to itself; run
+it from the repo root with `sheet.md` and `th_registry.yaml` beside it. Bump
+`REPO_VERSION` in `gen.py` when publishing a new version, and tag the commit to
+match. Committing to `master` republishes the Pages site.
 
 ## How the two columns are derived
 

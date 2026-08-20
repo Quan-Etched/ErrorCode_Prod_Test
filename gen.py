@@ -17,9 +17,31 @@ HERE = os.path.dirname(os.path.abspath(__file__))
 SHEET = os.path.join(HERE, 'sheet.md')
 REGISTRY = os.path.join(HERE, 'th_registry.yaml')
 OUT = os.path.join(HERE, 'index.html')
-XLSX = os.path.join(HERE, 'etched_error_code.xlsx')
+XLSX = os.path.join(HERE, 'etched_error_code.xlsx')            # verbatim mirror
+ANNOTATED = os.path.join(HERE, 'etched_error_code_annotated.xlsx')  # joined view
 XLSX_NAME = os.path.basename(XLSX)
+ANNOTATED_NAME = os.path.basename(ANNOTATED)
 DATA_DIR = os.path.join(HERE, 'data')
+SRC_DIR = os.path.join(DATA_DIR, 'source')
+
+# Best-effort tab names: the Drive markdown export carries no tab names, so the
+# seven contiguous grids it emits are named after their content, in source
+# order. Renaming a tab here is the only edit needed if the originals differ.
+SOURCE_TABS = ['Revision History', 'MLT 1X', 'L10', 'L11',
+               'Field Definitions', 'DRI Ownership', 'Suite Run Log']
+
+# ------------------------------------------------------------------ identity
+REPO_VERSION = '0.1'          # version of this repo / published page
+REPO_URL = 'https://github.com/etched-ai/32x-error-code'
+PAGES_URL = 'https://fantastic-telegram-38n6vyw.pages.github.io/'
+SHEET_URL = ('https://docs.google.com/spreadsheets/d/'
+             '1zKcxEXyYFLAQkI0AnVtZnSQ7Z-sxGqzGBpc9-0qhrqk/edit?gid=1353335746')
+REGISTRY_URL = ('https://github.com/etched-ai/sw/blob/master/host/system_test/'
+                'error_codes/th_registry.yaml')
+SLACK_CHANNEL = '#error-code-define'
+SLACK_URL = 'https://etchedai.slack.com/archives/C0B299EA7UK'
+SLACK_CHANNEL_2 = '#tiger-error-code'
+SLACK_URL_2 = 'https://etchedai.slack.com/archives/C0BMBRF327R'
 
 # ---------------------------------------------------------------- enum legends
 # Straight from th_registry.yaml inline comments.
@@ -440,13 +462,70 @@ def write_csvs(tabs):
         written.append((os.path.basename(path), name, len(rows)))
     return written
 
+NUMERIC = re.compile(r'[1-9]\d*$')
+
+def cell(v):
+    """Original cell value; integers back to numbers, everything else verbatim.
+
+    Leading-zero and dotted strings stay text ('0.1', '00: Undefine') because
+    that is what the sheet holds.
+    """
+    return int(v) if NUMERIC.fullmatch(v) else v
+
+def source_grids():
+    """The sheet as exported: one grid per tab, rows verbatim, blanks kept."""
+    out = []
+    for i, block in enumerate(BL):
+        name = SOURCE_TABS[i] if i < len(SOURCE_TABS) else f'Sheet{i + 1}'
+        width = max(len(r) for r in block)
+        rows = [[cell(r[c]) if c < len(r) else '' for c in range(width)] for r in block]
+        out.append((name, rows))
+    return out
+
+def write_source_xlsx(grids):
+    """Mirror of the original workbook: same tabs, same columns, same rows.
+
+    Nothing is added, dropped, reordered or restyled -- the point is that a
+    download of this file is the sheet, not a view of it. Formatting, merges
+    and formulas cannot survive the markdown export and are not reconstructed.
+    """
+    try:
+        from openpyxl import Workbook
+        from openpyxl.utils import get_column_letter
+    except ImportError:
+        return False
+    wb = Workbook()
+    wb.remove(wb.active)
+    for name, rows in grids:
+        ws = wb.create_sheet(name[:31])
+        for r in rows:
+            ws.append(r)
+        width = max(len(r) for r in rows)
+        for i in range(1, width + 1):
+            longest = max(len(str(r[i - 1])) for r in rows if i <= len(r))
+            ws.column_dimensions[get_column_letter(i)].width = min(max(longest + 2, 9), 60)
+    wb.save(XLSX)
+    return True
+
+def write_source_csvs(grids):
+    os.makedirs(SRC_DIR, exist_ok=True)
+    written = []
+    for name, rows in grids:
+        path = os.path.join(SRC_DIR, slug(name) + '.csv')
+        with open(path, 'w', newline='') as fh:
+            csv.writer(fh).writerows(rows)
+        written.append((os.path.basename(path), name, len(rows)))
+    return written
+
+
 def write_xlsx(tabs):
+    """The joined view: sheet data plus everything resolved from the registry."""
     try:
         from openpyxl import Workbook
         from openpyxl.styles import Alignment, Font, PatternFill
         from openpyxl.utils import get_column_letter
     except ImportError:
-        print('openpyxl not installed - skipping', XLSX_NAME, file=sys.stderr)
+        print('openpyxl not installed - skipping workbooks', file=sys.stderr)
         return False
     wb = Workbook()
     wb.remove(wb.active)
@@ -472,14 +551,22 @@ def write_xlsx(tabs):
             for cell in ws[get_column_letter(i)][1:]:
                 cell.alignment = wrap if width >= 40 else top
         ws.row_dimensions[1].height = 30
-    wb.save(XLSX)
+    wb.save(ANNOTATED)
     return True
 
+GRIDS = source_grids()
+src_ok = write_source_xlsx(GRIDS)
+src_csvs = write_source_csvs(GRIDS)
 csvs = write_csvs(TABS)
 ok = write_xlsx(TABS)
-print(f'wrote {len(csvs)} CSVs in data/' + (f' and {XLSX_NAME}' if ok else ''))
+print(f'wrote {XLSX_NAME} (verbatim mirror, {len(GRIDS)} tabs)' if src_ok else
+      'openpyxl missing - no workbooks written')
+for fn, name, n in src_csvs:
+    print(f'  data/source/{fn:<26} {name} ({n} rows)')
+if ok:
+    print(f'wrote {ANNOTATED_NAME} (joined view, {len(TABS)} tabs)')
 for fn, name, n in csvs:
-    print(f'  data/{fn:<28} {name} ({n} rows)')
+    print(f'  data/{fn:<33} {name} ({n} rows)')
 
 
 def human(path):
@@ -488,15 +575,26 @@ def human(path):
 
 
 download_rows = [
-    [f'<a href="{XLSX_NAME}"><strong>{XLSX_NAME}</strong></a>' if ok else
+    [f'<a href="{XLSX_NAME}"><strong>{XLSX_NAME}</strong></a>' if src_ok else
      f'<code>{XLSX_NAME}</code>',
-     'Excel workbook &mdash; one sheet per source tab, filters and frozen headers on. '
-     'The editable copy: change it, commit it, regenerate.',
-     human(XLSX) if ok else '&mdash;'],
+     'The source workbook &mdash; a mirror of the original spreadsheet. Same tabs in '
+     'the same order, same columns, same rows, nothing added or reordered. '
+     'This is the file to edit and commit.',
+     human(XLSX) if src_ok else '&mdash;'],
+    [f'<a href="{ANNOTATED_NAME}">{ANNOTATED_NAME}</a>' if ok else
+     f'<code>{ANNOTATED_NAME}</code>',
+     'The same data with everything this page joins in &mdash; version, original '
+     'author, severity/quick-action names, owner, <code>since</code>, registry '
+     'status &mdash; plus autofilters and frozen headers.',
+     human(ANNOTATED) if ok else '&mdash;'],
+    ['<code>data/source/</code><br>' + '<br>'.join(
+         f'<a href="data/source/{fn}">{fn}</a>' for fn, _, _ in src_csvs),
+     'Each source tab as CSV, verbatim &mdash; the diffable form of the workbook above.',
+     f'{len(src_csvs)} files'],
     ['<code>data/</code><br>' + '<br>'.join(
          f'<a href="data/{fn}">{fn}</a>' for fn, _, _ in csvs),
-     f'The same {len(csvs)} tabs as CSV, one file per tab &mdash; so git diffs a revision '
-     'line by line instead of as a binary blob.',
+     f'The {len(csvs)} joined tabs as CSV &mdash; so git diffs a revision line by line '
+     'instead of as a binary blob.',
      f'{len(csvs)} files'],
     ['<a href="sheet.md">sheet.md</a>',
      'Verbatim export of the Google Sheet the tables were built from.',
@@ -558,6 +656,17 @@ font-weight:600;white-space:nowrap;border:1px solid var(--line);background:var(-
 .qa6{color:#1d7a4c;border-color:#1d7a4c55}
 .qa0{color:var(--muted)}
 .nyr{color:var(--muted);font-weight:500}
+.meta{background:var(--card);border:1px solid var(--line);border-radius:10px;
+padding:6px 18px;margin:20px 0 4px}
+.meta dl{display:grid;grid-template-columns:max-content 1fr;gap:0 20px;margin:0}
+.meta dt{color:var(--muted);font-size:.76rem;text-transform:uppercase;
+letter-spacing:.04em;font-weight:650;padding:7px 0;border-bottom:1px solid var(--line)}
+.meta dd{margin:0;padding:7px 0;font-size:.88rem;border-bottom:1px solid var(--line);
+overflow-wrap:anywhere}
+.meta dt:last-of-type,.meta dd:last-of-type{border-bottom:0}
+.meta .sub{font-size:.82rem}
+@media(max-width:560px){.meta dl{grid-template-columns:1fr;gap:0}
+.meta dt{padding-bottom:0;border-bottom:0}.meta dd{padding-top:2px}}
 .stats{display:flex;flex-wrap:wrap;gap:10px;margin:20px 0 4px}
 .stat{flex:1 1 120px;background:var(--card);border:1px solid var(--line);
 border-radius:8px;padding:12px 14px}
@@ -572,6 +681,27 @@ footer{margin-top:56px;padding-top:16px;border-top:1px solid var(--line);
 color:var(--muted);font-size:.82rem}
 """
 
+META_ROWS = [
+    ('Version', f'<strong>v{REPO_VERSION}</strong> of this page and repo &middot; '
+                f'source spreadsheet revision <strong>'
+                f'{rev_rows[-1][0].replace("<strong>", "").replace("</strong>", "")}'
+                f'</strong> &middot; every code at <code>version: 1</code>'),
+    ('Repository', f'<a href="{REPO_URL}">{REPO_URL.replace("https://", "")}</a>'),
+    ('Published at', f'<a href="{PAGES_URL}">{PAGES_URL.replace("https://", "").rstrip("/")}</a>'
+                     ' <span class="sub">(private &mdash; Etched org members)</span>'),
+    ('Original spreadsheet', f'<a href="{SHEET_URL}">_Etched Error Code</a> '
+                             '<span class="sub">(Google Sheets)</span>'),
+    ('Source of truth', f'<a href="{REGISTRY_URL}"><code>etched-ai/sw</code> &rarr; '
+                        '<code>host/system_test/error_codes/th_registry.yaml</code></a>'),
+    ('Slack', f'<a href="{SLACK_URL}">{SLACK_CHANNEL}</a> &middot; '
+              f'<a href="{SLACK_URL_2}">{SLACK_CHANNEL_2}</a>'),
+    ('Owner', '<code>supercomputing-sw</code>'),
+]
+
+meta_html = ('<div class="meta"><dl>' + ''.join(
+    f'<dt>{esc(k)}</dt><dd>{v}</dd>' for k, v in META_ROWS) + '</dl></div>')
+
+
 def section(title, anchor, body, intro=''):
     return (f'<h2 id="{anchor}">{esc(title)}</h2>' +
             (f'<p class="sub">{intro}</p>' if intro else '') + body)
@@ -582,8 +712,9 @@ html_out = f"""<title>32x Error Code Registry</title>
 <h1>32x Error Code Registry</h1>
 <p class="sub">Consolidated Etched test-harness error codes &mdash; MLT&nbsp;/&nbsp;1X, L10 and L11 &mdash;
 with revision history and original author per code. Field names and enum values follow
-<a href="https://github.com/etched-ai/sw/blob/master/host/system_test/error_codes/th_registry.yaml"><code>th_registry.yaml</code></a>
-(TH Error Code Specification v0.3 &sect;7, &sect;11.1), the source of truth.</p>
+<code>th_registry.yaml</code> (TH Error Code Specification v0.3 &sect;7, &sect;11.1), the source of truth.</p>
+
+{meta_html}
 
 <div class="stats">
 {stat(total, 'error codes')}
@@ -659,7 +790,7 @@ registry plus the spreadsheet &mdash; regenerate rather than hand-edit.
 </div>
 
 <footer>
-Generated by <code>gen.py</code> from <code>th_registry.yaml</code> + the _Etched Error Code sheet.
+v{REPO_VERSION} &middot; generated by <code>gen.py</code> from <code>th_registry.yaml</code> + the _Etched Error Code sheet.
 Owner of the code space: <code>supercomputing-sw</code>. Codes marked
 <span class="badge nyr">sheet only</span> exist in the spreadsheet but are not yet in
 <code>th_registry.yaml</code>.

@@ -1,0 +1,215 @@
+,,,,,,,
+Error Code ID,Packed,Name,Message,Quick_Action,Source,Component,Test_Case
+TH-SOHU-0002-S2Q9,371785730,SOHU_NOT_PINGABLE,Sohu not pingable / no response from firmware,Halt & escalate,L10 Test,SOHU,"SohuPingTestCase, SohuVfioPingMultiChipTestCase, SohuFlrMultiChipTestCase"
+TH-SOHU-0011-S2Q9,321454091,SOHU_SRAM_TEST_FAILED,On-chip SRAM test failure (stuck bits / readback mismatch),Halt & escalate,L10 Test,SOHU,SohuSramMemoryMultiChipTestCase
+TH-SOHU-0015-S2Q9,371785743,SOHU_WORKLOAD_TIMEOUT,Workload hang / operation timeout,Halt & escalate,L10 Test,SOHU,"SohuMlpTp8TestCase, SohuLlama70bForwardIteratedTestCase, SohuLlama70bHp8ForwardIteratedTestCase, SohuLlamaTp8InferenceMaxTestCase, Llama8bFp8Tp1SmokeTestCase, SohuPowerVirusMultiChipTestCase"
+TH-SOHU-0016-S2Q9,455671824,SOHU_WEIGHT_LOAD_MISMATCH,Weight load spot-check mismatch,Halt & escalate,L10 Test,SOHU,"SohuLlama70bForwardIteratedTestCase, SohuLlama70bHp8ForwardIteratedTestCase, SohuLlamaTp8InferenceMaxTestCase, Llama8bFp8Tp1SmokeTestCase"
+TH-SOHU-0017-S2Q9,371785745,SOHU_INFERENCE_THROUGHPUT_BELOW_THRESHOLD,Sustained inference throughput on the million-token test did not reach 95% of the suite's expected_chip_tokens_per_second.,Halt & escalate,L10 Test,SOHU,SohuLlamaTp8InferenceMaxTestCase
+TH-SOHU-0018-S2Q9,371785746,SOHU_INFERENCE_NUMERIC_MISMATCH,End-to-end inference numeric mismatch vs reference,Halt & escalate,L10 Test,SOHU,"SohuMlpTp8TestCase, SohuLlama70bForwardIteratedTestCase, SohuLlama70bHp8ForwardIteratedTestCase, SohuLlamaTp8InferenceMaxTestCase, Llama8bFp8Tp1SmokeTestCase"
+TH-SOHU-0019-S2Q9,371785747,SOHU_FLR_FAILED,FLR failed / flr_timeout_s 5.0s / recovery_timeout_s 10.0s / not pingable between FLRs,Halt & escalate,L10 Test,SOHU,SohuFlrMultiChipTestCase
+TH-SOHU-0025-S4Q9,373882905,SOHU_SNAPSHOT_CAPTURE_FAILED,Chip state snapshot capture failed,Halt & escalate,L10 Test,SOHU,SohuSnapTestCase
+TH-SOHU-0027-S2Q9,371785755,SOHU_VFIO_PING_LATENCY_EXCEEDED,"VFIO ping responses received but none within the allowed latency (device pingable, latency out of spec)",Halt & escalate,L10 Test,SOHU,SohuVfioPingMultiChipTestCase
+TH-SOHU-0028-S4Q9,390660124,SOHU_WORKLOAD_BINARY_FAILED,MTT binary exited non-zero for a reason the harness cannot determine,Halt & escalate,L10 Test,SOHU,"SohuMlpTp8TestCase, SohuLlama70bForwardIteratedTestCase, SohuLlama70bHp8ForwardIteratedTestCase, SohuLlamaTp8InferenceMaxTestCase, Llama8bFp8Tp1SmokeTestCase"
+TH-C2C-0001-S2Q9,371785729,C2C_LINKUP_FAILED,"C2C lanes failed to train or link up within the timeout: RX equalization did not converge after its configured attempts, or the link-up test reported one or more datalinks/lanes down.",Halt & escalate,L10 Test,C2C,"C2cLinkupMultiChipTestCase, C2cThroughputMultiChipTestCase"
+TH-C2C-0002-S2Q9,455671810,C2C_INTEGRITY_MISMATCH,Bit-by-bit C2C loopback comparison found a data mismatch on at least one datalink/lane.,Halt & escalate,L10 Test,C2C,C2cIntegrityMultiChipTestCase
+TH-C2C-0003-S2Q9,371785731,C2C_THROUGHPUT_BELOW_THRESHOLD,"The large C2C transfer did not meet its acceptance criteria: measured throughput below the configured percentage of line rate (90% in the 1X suite), or the post-FEC uncorrected error fraction above its limit.",Halt & escalate,L10 Test,C2C,C2cThroughputMultiChipTestCase
+TH-C2C-0004-S4Q9,373882884,C2C_LANE_MARGIN_BELOW_THRESHOLD,Worst per-lane minimum BER from the eye-diagram sweep exceeded the configured ber_threshold; the SERDES margin spec is not final.,Halt & escalate,L10 Test,C2C,C2cFirCdrSweepMultiChipTestCase
+TH-C2C-0005-S2Q9,455671813,C2C_PRBS_ERROR_THRESHOLD_EXCEEDED,The C2C PRBS run completed but the observed bit-error count or rate exceeded the configured acceptance limit.,Halt & escalate,L10 Test,C2C,C2cPrbsMultiChipTestCase
+TH-C2C-0006-S4Q9,390660102,C2C_SWEEP_OUTPUT_INVALID,"The FIR/CDR or PRBS test did not produce complete, parseable lane results, so the C2C verdict is inconclusive.",Halt & escalate,L10 Test,C2C,"C2cFirCdrSweepMultiChipTestCase, C2cPrbsMultiChipTestCase"
+TH-PCIE-0001-S2Q6,371589121,PCIE_LINK_STATE_MISMATCH,PCIe link state mismatch (not L0 / Gen5 / x16),Retry,L10 Test,PCIE,CheckPcieTopology
+TH-PCIE-0003-S2Q9,371785731,PCIE_CSRAM_DMA_THROUGHPUT_BELOW_THRESHOLD,PCIe->CSRAM DMA throughput below threshold (50GB/s),Halt & escalate,L10 Test,PCIE,SohuDmaMultiChipTestCase
+TH-PCIE-0004-S2Q9,455671812,PCIE_HBM_DMA_DATA_MISMATCH,PCIe->HBM DMA data integrity mismatch,Halt & escalate,L10 Test,PCIE,SohuDmaMultiChipTestCase
+TH-PCIE-0005-S2Q9,371785733,PCIE_HBM_DMA_THROUGHPUT_BELOW_THRESHOLD,PCIe->HBM DMA throughput below threshold (16GB/s),Halt & escalate,L10 Test,PCIE,SohuDmaMultiChipTestCase
+TH-PCIE-0008-S2Q6,371589128,SOHU_ENDPOINT_NOT_ENUMERATED,Sohu endpoint not enumerated (absent from PCIe tree / RPC proxy),Retry,L10 Test,PCIE,"CheckPcieTopology, SohuVfioPingMultiChipTestCase"
+TH-PCIE-0009-S5Q9,358154249,PCIE_EXPECTED_TOPOLOGY_UNAVAILABLE,The expected PCIe topology or device specification could not be loaded; no PCIe DUT verdict is available.,Halt & escalate,L10 Test,PCIe,CheckPcieTopology
+TH-PCIE-0010-S4Q9,390660106,PCIE_INVENTORY_QUERY_FAILED,"The PCIe inventory command failed, so the test could not enumerate devices or links.",Halt & escalate,L10 Test,PCIe,CheckPcieTopology
+TH-PCIE-0011-S4Q9,390660107,PCIE_INVENTORY_OUTPUT_INVALID,"The PCIe inventory output was empty, incomplete, or could not be parsed into a reliable topology.",Halt & escalate,L10 Test,PCIe,CheckPcieTopology
+TH-PCIE-0012-S5Q9,358154252,PCIE_TOPOLOGY_SPEC_INVALID,"The configured PCIe topology contains invalid or conflicting device identifiers, counts, or topology indices.",Halt & escalate,L10 Test,PCIe,CheckPcieTopology
+TH-PCIE-0013-S2Q6,371589133,PCIE_TOPOLOGY_MISMATCH,The discovered PCIe device count or parent/child topology does not match the expected server topology.,Retry,L10 Test,PCIe,CheckPcieTopology
+TH-PCIE-0014-S2Q9,455671822,PCIE_DEVICE_IDENTITY_MISMATCH,"A discovered PCIe device has an unexpected vendor ID, device ID, subsystem ID, or configured device name.",Halt & escalate,L10 Test,PCIe,CheckPcieTopology
+TH-PCIE-0015-S4Q9,457768975,PCIE_DUPLICATE_BDF,Two expected or discovered PCIe devices resolve to the same bus/device/function address.,Halt & escalate,L10 Test,PCIe,CheckPcieTopology
+TH-PCIE-0016-S4Q9,390660112,PLX_DAEMON_VERSION_QUERY_FAILED,The PLX daemon firmware/version query failed or returned no usable switch information.,Halt & escalate,L10 Test,PLX switch,CheckPlxDaemonFirmwareVersion
+TH-PCIE-0017-S5Q9,358154257,PLX_DAEMON_FIRMWARE_VERSION_MISMATCH,The PLX daemon or switch firmware version does not match the expected L10 release.,Halt & escalate,L10 Test,PLX switch,CheckPlxDaemonFirmwareVersion
+TH-PCIE-0018-S4Q9,357105682,PLX_DAEMON_FIRMWARE_UPDATE_FAILED,The PLX daemon firmware update or activation command failed.,Halt & escalate,L10 Test,PLX switch,UpdatePlxDaemonFirmwareVersion
+TH-PCIE-0019-S4Q9,357105683,PLX_DAEMON_POST_UPDATE_VERIFY_FAILED,PLX daemon firmware did not report the requested version after the update completed.,Halt & escalate,L10 Test,PLX switch,UpdatePlxDaemonFirmwareVersion
+TH-HBM-0001-S2Q9,321454081,HBM_PMBIST_FAILED,HBM PMBIST failure,Halt & escalate,L10 Test,HBM,SohuPmbistMultiChipTestCase
+TH-HBM-0004-S2Q6,321257476,HBM_MTC_STRESS_FAILED,HBM MTC stress test failure,Retry,L10 Test,HBM,SohuMtcStressMultiChipTestCase
+TH-HBM-0005-S2Q9,321454085,HBM_DMA_BANDWIDTH_BELOW_THRESHOLD,PCIe-to-HBM read or write throughput on the side under test did not reach the configured min_bandwidth_gb_s floor.,Halt & escalate,L10 Test,HBM,SohuDmaMultiChipTestCase
+TH-HBM-0006-S2Q9,321454086,HBM_LANE_REPAIR_FAILED,HBM lane repair failed - no passing repair found,Halt & escalate,L10 Test,HBM,SohuLaneRepairMultiChipTestCase
+TH-HBM-0007-S2Q9,455671815,HBM_DEVICE_ID_MISMATCH,HBM device ID read failure or mismatch,Halt & escalate,L10 Test,HBM,SohuHbmDeviceIdMultiChipTestCase
+TH-HBM-0008-S4Q9,323551240,HBM_LANE_REPAIR_INCONCLUSIVE,"HBM lane repair sweep did not complete, so repairability was never established",Halt & escalate,L10 Test,HBM,SohuLaneRepairMultiChipTestCase
+TH-MEM-0001-S4Q9,390660097,MEMORY_INVENTORY_QUERY_FAILED,The host memory inventory command failed; no DIMM verdict is available.,Halt & escalate,L10 Test,Host Memory,CheckMemory
+TH-MEM-0002-S4Q9,390660098,MEMORY_INVENTORY_OUTPUT_INVALID,The host memory inventory output was malformed or could not be parsed.,Halt & escalate,L10 Test,Host Memory,CheckMemory
+TH-MEM-0003-S2Q9,321454083,NO_DIMMS_DETECTED,No populated DIMMs were detected although the L10 BOM requires host memory.,Halt & escalate,L10 Test,Host Memory,CheckMemory
+TH-MEM-0004-S2Q9,321454084,DIMM_COUNT_MISMATCH,The number of populated DIMMs does not match the expected L10 BOM.,Halt & escalate,L10 Test,Host Memory,CheckMemory
+TH-MEM-0005-S2Q9,455671813,DIMM_IDENTITY_OR_CAPACITY_MISMATCH,"A DIMM manufacturer, part number, serial number, location, or capacity does not match the expected BOM.",Halt & escalate,L10 Test,Host Memory,CheckMemory
+TH-MEM-0006-S4Q9,357105670,MIXED_DIMM_CONFIGURATION,The installed DIMMs are not homogeneous where the platform configuration requires matching parts and capacities.,Halt & escalate,L10 Test,Host Memory,CheckMemory
+TH-MEM-0007-S2Q6,321257479,MEMORY_STRESS_FAILED,"The host memory stress workload reported data errors, verification failures, or a workload-failure exit status.",Retry,L10 Test,Host Memory,"MemoryStressNg, MemoryStress"
+TH-MEM-0008-S4Q9,390660104,MEMORY_STRESS_METRICS_INVALID,"The memory stress tool completed without usable result statistics or produced malformed metrics, so the verdict is inconclusive.",Halt & escalate,L10 Test,Host Memory,"MemoryStressNg, MemoryStress"
+TH-MEM-0009-S5Q9,358154249,NUMA_TOPOLOGY_PRECONDITION_NOT_MET,The host NUMA/SNC topology does not provide the nodes required by the configured cross-NUMA I/O stress.,Halt & escalate,L10 Test,Host Memory,IoStress
+TH-MEM-0010-S2Q6,321257482,CROSS_NUMA_MEMORY_STRESS_FAILED,The cross-NUMA stream or memory-transfer workload failed its execution or acceptance criteria.,Retry,L10 Test,Host Memory,IoStress
+TH-CPU-0001-S2Q6,371589121,CPU_STRESS_FAIL,stress-ng CPU stress failed because a stressor/verification error occurred or the tool returned its workload-failure status.,Retry,L10 Test,CPU,CpuStress
+TH-CPU-0003-S5Q9,391708675,CPU_STRESS_TOOL_UNAVAILABLE,stress-ng is not installed or cannot be executed on the target; no CPU verdict is available (ERROR disposition; excluded from DUT yield).,Halt & escalate,L10 Test,CPU,CpuStress
+TH-CPU-0004-S4Q6,390463492,CPU_STRESS_EXECUTION_ERROR,"stress-ng returned an execution, initialization, option, resource, unsupported-stressor, or signal error rather than a CPU workload verdict.",Retry,L10 Test,CPU,CpuStress
+TH-CPU-0005-S4Q9,390660101,CPU_INVENTORY_QUERY_FAILED,The CPU inventory command failed; no CPU BOM verdict is available.,Halt & escalate,L10 Test,CPU,CheckCpu
+TH-CPU-0006-S4Q9,390660102,CPU_INVENTORY_OUTPUT_INVALID,The CPU inventory output was malformed or could not be parsed into processor records.,Halt & escalate,L10 Test,CPU,CheckCpu
+TH-CPU-0007-S2Q9,371785735,CPU_COUNT_MISMATCH,The discovered processor count does not match the expected L10 BOM.,Halt & escalate,L10 Test,CPU,CheckCpu
+TH-CPU-0008-S2Q9,455671816,CPU_IDENTITY_MISMATCH,A processor part number or manufacturer does not match the expected L10 BOM.,Halt & escalate,L10 Test,CPU,CheckCpu
+TH-CPU-0009-S2Q9,371785737,CPU_TOPOLOGY_MISMATCH,A processor core count or thread count does not match the expected L10 BOM.,Halt & escalate,L10 Test,CPU,CheckCpu
+TH-CPU-0010-S4Q9,357105674,CPU_CLOCK_MISMATCH,A processor base or maximum clock reported by inventory does not match the expected L10 BOM.,Halt & escalate,L10 Test,CPU,CheckCpu
+TH-DMA-0001-S2Q6,371589121,DMA_DATA_PATH_TEST_FAILED,Host-chip DMA data-path test failure,Retry,L10 Test,DMA,SohuDmaMultiChipTestCase
+TH-DISK-0001-S4Q9,390660097,DISK_INVENTORY_QUERY_FAILED,The block-device or NVMe inventory command failed; no storage verdict is available.,Halt & escalate,L10 Test,Disk,"CheckDisk, DiskFormat, DiskSmart, DiskStress"
+TH-DISK-0002-S4Q9,390660098,DISK_INVENTORY_OUTPUT_INVALID,Block-device or NVMe inventory output was malformed or could not be parsed.,Halt & escalate,L10 Test,Disk,"CheckDisk, DiskFormat, DiskStress"
+TH-DISK-0003-S2Q9,304676867,NO_DISKS_DETECTED,No storage devices were detected although the L10 BOM requires disks.,Halt & escalate,L10 Test,Disk,"CheckDisk, DiskSmart"
+TH-DISK-0004-S2Q9,304676868,DISK_COUNT_MISMATCH,The discovered disk count does not match the expected L10 BOM.,Halt & escalate,L10 Test,Disk,CheckDisk
+TH-DISK-0005-S2Q9,455671813,DISK_IDENTITY_OR_CAPACITY_MISMATCH,"A disk model, serial number, namespace, or capacity does not match the expected L10 BOM.",Halt & escalate,L10 Test,Disk,CheckDisk
+TH-DISK-0006-S4Q9,357105670,MIXED_DRIVE_CONFIGURATION,Installed drives do not satisfy the required homogeneous model/capacity configuration.,Halt & escalate,L10 Test,Disk,CheckDisk
+TH-DISK-0007-S5Q9,358154247,BOOT_DEVICE_UNDETERMINED,The test could not reliably identify the host boot device and therefore could not safely select data drives.,Halt & escalate,L10 Test,Disk,"DiskFormat, DiskStress"
+TH-DISK-0008-S5Q9,358154248,NO_TESTABLE_NVME_DEVICES,No eligible non-boot NVMe device remained after discovery and configured exclusions.,Halt & escalate,L10 Test,Disk,"DiskFormat, DiskSmart, DiskStress"
+TH-DISK-0009-S2Q9,304676873,NVME_NAMESPACE_MISSING,An expected NVMe controller has no usable namespace and automatic formatting is disabled.,Halt & escalate,L10 Test,NVMe SSD,DiskFormat
+TH-DISK-0010-S4Q9,306774026,NVME_FORMAT_FAILED,The NVMe format or namespace creation command failed.,Halt & escalate,L10 Test,NVMe SSD,DiskFormat
+TH-DISK-0011-S2Q9,304676875,NVME_NAMESPACE_NOT_CREATED,The expected NVMe namespace was still absent after the format/namespace operation completed.,Halt & escalate,L10 Test,NVMe SSD,DiskFormat
+TH-DISK-0012-S2Q9,304676876,NVME_SMART_SELF_TEST_FAILED,An NVMe device self-test completed with a failure or did not complete successfully.,Halt & escalate,L10 Test,NVMe SSD,DiskSmart
+TH-DISK-0013-S4Q9,390660109,NVME_SMART_DATA_UNAVAILABLE,SMART/health data could not be read for an eligible NVMe device.,Halt & escalate,L10 Test,NVMe SSD,DiskSmart
+TH-DISK-0014-S2Q9,304676878,NVME_SMART_CRITICAL_WARNING,The NVMe SMART critical-warning field is non-zero.,Halt & escalate,L10 Test,NVMe SSD,DiskSmart
+TH-DISK-0015-S2Q9,304676879,NVME_AVAILABLE_SPARE_BELOW_THRESHOLD,NVMe available spare is below the device or configured threshold.,Halt & escalate,L10 Test,NVMe SSD,DiskSmart
+TH-DISK-0016-S2Q9,304676880,NVME_MEDIA_ERRORS_DETECTED,NVMe SMART reports one or more media/data-integrity errors.,Halt & escalate,L10 Test,NVMe SSD,DiskSmart
+TH-DISK-0017-S4Q9,373882897,NVME_TEMPERATURE_OUT_OF_RANGE,NVMe temperature is outside the configured safe operating range.,Halt & escalate,L10 Test,NVMe SSD,DiskSmart
+TH-DISK-0018-S2Q9,304676882,NVME_WEAR_LIMIT_EXCEEDED,NVMe percentage-used or wear indicator exceeds the configured acceptance limit.,Halt & escalate,L10 Test,NVMe SSD,DiskSmart
+TH-DISK-0019-S2Q6,304480275,DISK_STRESS_FIO_FAILED,The fio disk stress workload returned a workload-failure status for an eligible drive.,Retry,L10 Test,Disk,DiskStress
+TH-DISK-0020-S4Q9,390660116,DISK_STRESS_OUTPUT_INVALID,fio output was missing or could not be parsed into valid per-drive results.,Halt & escalate,L10 Test,Disk,DiskStress
+TH-NIC-0001-S5Q9,358154241,NIC_EXPECTED_CONFIG_UNAVAILABLE,The expected NIC/BOM/network configuration could not be loaded; no NIC verdict is available.,Halt & escalate,L10 Test,NIC,"CheckNic, CheckLomNicMac, LoopbackTopologyTest, NetworkBwRdmaTest, CheckNicAsicRails"
+TH-NIC-0002-S4Q9,390660098,NIC_INVENTORY_QUERY_FAILED,NIC inventory or interface discovery failed.,Halt & escalate,L10 Test,NIC,"CheckNic, CheckLomNicMac, LoopbackTopologyTest, NetworkBwRdmaTest"
+TH-NIC-0003-S4Q9,390660099,NIC_DISCOVERY_SERVICE_UNAVAILABLE,The NIC discovery/netd service or its Unix-domain socket was not ready or reachable.,Halt & escalate,L10 Test,NIC,"CheckNic, CheckInterfaceLinkStatus, CheckNetdReadiness"
+TH-NIC-0004-S2Q9,287899652,NIC_COUNT_MISMATCH,The discovered NIC count does not match the expected L10 BOM.,Halt & escalate,L10 Test,NIC,CheckNic
+TH-NIC-0005-S2Q9,455671813,NIC_IDENTITY_MISMATCH,"A NIC vendor, device, name, speed capability, or expected grouping does not match configuration.",Halt & escalate,L10 Test,NIC,CheckNic
+TH-NIC-0006-S4Q9,457768966,NIC_DUPLICATE_PCI_ADDRESS,Multiple NIC records resolve to the same PCI address.,Halt & escalate,L10 Test,NIC,CheckNic
+TH-NIC-0007-S2Q9,287899655,UNEXPECTED_NIC_DETECTED,A NIC that is not present in the expected L10 configuration was discovered.,Halt & escalate,L10 Test,NIC,CheckNic
+TH-NIC-0008-S2Q9,287899656,LOM_NIC_NOT_DETECTED,The configured LAN-on-motherboard interface was not found.,Halt & escalate,L10 Test,LOM NIC,CheckLomNicMac
+TH-NIC-0009-S2Q9,455671817,LOM_MAC_ADDRESS_MISMATCH,The LAN-on-motherboard MAC address does not match the expected service/BOM value.,Halt & escalate,L10 Test,LOM NIC,CheckLomNicMac
+TH-NIC-0010-S4Q9,390660106,NIC_DRIVER_QUERY_FAILED,The installed NIC driver or firmware version could not be queried.,Halt & escalate,L10 Test,NIC,CheckBroadcomDrivers
+TH-NIC-0011-S5Q9,358154251,NIC_DRIVER_VERSION_MISMATCH,The installed NIC kernel driver does not match the required L10 release.,Halt & escalate,L10 Test,NIC,CheckBroadcomDrivers
+TH-NIC-0012-S5Q9,358154252,NIC_FIRMWARE_VERSION_MISMATCH,The installed NIC firmware does not match the required L10 release.,Halt & escalate,L10 Test,NIC,CheckBroadcomDrivers
+TH-NIC-0013-S4Q9,390660109,NIC_VERSION_OUTPUT_INVALID,NIC driver/firmware version output was incomplete or could not be parsed.,Halt & escalate,L10 Test,NIC,CheckBroadcomDrivers
+TH-NIC-0014-S2Q6,287703054,NIC_INTERFACE_LINK_DOWN,A required NIC interface has no carrier or is not operationally up.,Retry,L10 Test,NIC,"CheckInterfaceLinkStatus, LoopbackTopologyTest"
+TH-NIC-0015-S4Q9,390660111,NETD_NOT_READY,netd did not reach its ready state within the configured wait interval.,Halt & escalate,L10 Test,NIC,CheckNetdReadiness
+TH-NIC-0016-S5Q9,358154256,NETD_ACTIVE_SLAVE_MISMATCH,The active bond slave reported by netd is not the configured expected interface.,Halt & escalate,L10 Test,NIC,CheckNetdReadiness
+TH-NIC-0017-S2Q9,287899665,LOOPBACK_GROUP_COUNT_MISMATCH,A configured loopback NIC group does not contain the expected number of interfaces.,Halt & escalate,L10 Test,NIC,"LoopbackTopologyTest, NetworkBwRdmaTest"
+TH-NIC-0018-S5Q9,358154258,LOOPBACK_TOPOLOGY_INDEX_INVALID,A configured loopback client/server index is outside the discovered NIC group.,Halt & escalate,L10 Test,NIC,"LoopbackTopologyTest, NetworkBwRdmaTest"
+TH-NIC-0019-S2Q9,287899667,RDMA_DEVICE_UNAVAILABLE,A required interface has no RDMA device binding or the configured group has no RDMA-capable interface.,Halt & escalate,L10 Test,NIC,"LoopbackTopologyTest, NetworkBwRdmaTest"
+TH-NIC-0020-S4Q9,390660116,LOOPBACK_PAIR_CONFIGURATION_FAILED,"The test could not configure the loopback pair IP, MTU, namespace, neighbor, or interface state.",Halt & escalate,L10 Test,NIC,"LoopbackTopologyTest, NetworkBwRdmaTest"
+TH-NIC-0021-S4Q9,289996821,ROCE_GID_UNAVAILABLE,A required IPv4 RoCE v2 GID could not be found for one or both interfaces in the pair.,Halt & escalate,L10 Test,NIC,"LoopbackTopologyTest, NetworkBwRdmaTest"
+TH-NIC-0022-S2Q6,287703062,LOOPBACK_PROBE_FAILED,The short RDMA loopback probe failed to establish traffic or returned a workload failure.,Retry,L10 Test,NIC,LoopbackTopologyTest
+TH-NIC-0023-S5Q9,358154263,NO_RDMA_PAIRS_TO_TEST,No valid RDMA-capable client/server pair remained after discovery and topology validation.,Halt & escalate,L10 Test,NIC,NetworkBwRdmaTest
+TH-NIC-0024-S4Q9,390660120,RDMA_SERVER_START_FAILED,The ib_write_bw server process could not be started for an RDMA pair.,Halt & escalate,L10 Test,NIC,NetworkBwRdmaTest
+TH-NIC-0025-S2Q6,287703065,RDMA_CLIENT_EXECUTION_FAILED,The ib_write_bw client timed out or returned a non-zero status for an RDMA pair.,Retry,L10 Test,NIC,NetworkBwRdmaTest
+TH-NIC-0026-S4Q9,390660122,RDMA_BANDWIDTH_OUTPUT_INVALID,The RDMA bandwidth tool did not emit a parseable average-bandwidth result.,Halt & escalate,L10 Test,NIC,NetworkBwRdmaTest
+TH-NIC-0027-S2Q9,287899675,RDMA_BANDWIDTH_BELOW_THRESHOLD,Measured RDMA bandwidth for a configured pair is below the configured percentage of expected line rate.,Halt & escalate,L10 Test,NIC,NetworkBwRdmaTest
+TH-NIC-0028-S5Q9,358154268,NIC_RAIL_CONFIG_UNAVAILABLE,The expected NIC ASIC rail limits could not be loaded from product configuration.,Halt & escalate,L10 Test,NIC ASIC Rails,CheckNicAsicRails
+TH-NIC-0029-S4Q9,373882909,NIC_RAIL_READING_UNAVAILABLE,A required NIC ASIC voltage-rail reading is unavailable or reported as not applicable.,Halt & escalate,L10 Test,NIC ASIC Rails,CheckNicAsicRails
+TH-NIC-0030-S2Q9,371785758,NIC_RAIL_OUT_OF_RANGE,A NIC ASIC voltage rail is below its configured minimum or above its configured maximum.,Halt & escalate,L10 Test,NIC ASIC Rails,CheckNicAsicRails
+TH-NIC-0031-S4Q9,357105695,NIC_FIRMWARE_UPDATE_FAILED,The Broadcom NIC firmware update command failed.,Halt & escalate,L10 Test,NIC,BroadcomUpdateFwAndConfigure
+TH-NIC-0032-S4Q9,357105696,NIC_CONFIGURATION_APPLY_FAILED,"Required NIC port, driver, or firmware configuration could not be applied.",Halt & escalate,L10 Test,NIC,BroadcomUpdateFwAndConfigure
+TH-NIC-0033-S4Q9,357105697,NIC_POST_UPDATE_VERIFY_FAILED,NIC firmware or configuration did not match the requested state after update.,Halt & escalate,L10 Test,NIC,BroadcomUpdateFwAndConfigure
+TH-NIC-0034-S4Q9,457768994,NIC_MAC_ADDRESS_UNAVAILABLE,A required interface MAC address could not be read while constructing a loopback/RDMA pair.,Halt & escalate,L10 Test,NIC,"LoopbackTopologyTest, NetworkBwRdmaTest"
+TH-NIC-0035-S2Q6,287703075,NIC_LINK_RECOVERY_FAILED,A carrier-down interface did not recover after the configured link-speed/FEC recovery sequence.,Retry,L10 Test,NIC,LoopbackTopologyTest
+TH-VBB-0001-S4Q9,390660097,BASEBOARD_INVENTORY_QUERY_FAILED,Baseboard/VBB inventory or version information could not be queried.,Halt & escalate,L10 Test,VBB,"CheckBaseboard, CheckBaseboardVersion"
+TH-VBB-0002-S2Q9,455671810,BASEBOARD_IDENTITY_MISMATCH,"Baseboard manufacturer, product, serial, or board identity does not match the expected BOM.",Halt & escalate,L10 Test,VBB,CheckBaseboard
+TH-VBB-0003-S5Q9,358154243,BASEBOARD_VERSION_MISMATCH,The baseboard/VBB hardware or firmware version does not match the expected release.,Halt & escalate,L10 Test,VBB,CheckBaseboardVersion
+TH-VBB-0004-S5Q9,358154244,BASEBOARD_EXPECTED_CONFIG_UNAVAILABLE,Expected baseboard/VBB BOM or version data could not be loaded; no DUT verdict is available.,Halt & escalate,L10 Test,VBB,"CheckBaseboard, CheckBaseboardVersion"
+TH-MEZZ-0001-S2Q6,371589121,MEZZ_CPLD_ACCESS_FAILED,Mezz/eval CPLD register access or write failure,Retry,L10 Test,MEZZ,CpldDiagnosticsRemoteTestCase
+TH-BMC-0001-S5Q9,358154241,BMC_EXPECTED_CONFIG_UNAVAILABLE,Expected BMC/product configuration could not be loaded; no BMC comparison verdict is available.,Halt & escalate,L10 Test,BMC,"BmcCheck, BmcCheckFanLocation, BmcCheckFanControl"
+TH-BMC-0002-S4Q9,390660098,BMC_INVENTORY_QUERY_FAILED,The BMC inventory or management query command failed.,Halt & escalate,L10 Test,BMC,BmcCheck
+TH-BMC-0003-S4Q9,390660099,BMC_INVENTORY_OUTPUT_INVALID,BMC inventory output was incomplete or could not be parsed.,Halt & escalate,L10 Test,BMC,BmcCheck
+TH-BMC-0004-S2Q9,455671812,BMC_IDENTITY_MISMATCH,"BMC-reported platform vendor, product, or model identity does not match expected configuration.",Halt & escalate,L10 Test,BMC,BmcCheck
+TH-BMC-0005-S2Q9,455671813,BMC_MANAGEMENT_ADDRESS_MISMATCH,The BMC management IP address or MAC address does not match the expected server configuration.,Halt & escalate,L10 Test,BMC,BmcCheck
+TH-BMC-0006-S5Q9,358154246,BMC_FIRMWARE_VERSION_MISMATCH,The running BMC firmware version does not match the expected L10 release.,Halt & escalate,L10 Test,BMC,BmcCheck
+TH-BMC-0007-S4Q9,390660103,BMC_FAN_LOCATION_PROGRAM_FAILED,The BMC command to program fan locations failed.,Halt & escalate,L10 Test,BMC,BmcCheckFanLocation
+TH-BMC-0008-S4Q9,390660104,BMC_FAN_LOCATION_READBACK_FAILED,Programmed fan-location data could not be read back from the BMC.,Halt & escalate,L10 Test,BMC,BmcCheckFanLocation
+TH-BMC-0009-S5Q9,358154249,BMC_FAN_CONFIG_UNAVAILABLE,"BMC fan-zone, PWM, or sensor configuration needed by the fan-control test is missing or invalid.",Halt & escalate,L10 Test,BMC,BmcCheckFanControl
+TH-BMC-0010-S4Q9,390660106,BMC_SENSOR_QUERY_FAILED,The BMC sensor query failed or returned no usable fan/thermal readings.,Halt & escalate,L10 Test,BMC,BmcCheckFanControl
+TH-BMC-0011-S4Q6,289800203,BMC_CONNECTIVITY_FAILED,BMC connectivity validation observed packet loss or could not complete the configured reachability check.,Retry,L10 Test,BMC,BmcConnectivityCheck
+TH-BMC-0012-S4Q9,289996812,BMC_SSH_UNAVAILABLE,An SSH session to the BMC could not be established for the requested operation.,Halt & escalate,L10 Test,BMC,"SohuServerBmcFirmwareUpdate, SohuServerBiosUpdate, PsuFirmwareUpdate, CpldFirmwareUpdate, L10VBBUpdate, BmcPowerCycle"
+TH-BMC-0013-S4Q9,390660109,BMC_UPDATE_IMAGE_STAGING_FAILED,The firmware image or update configuration could not be staged to the BMC.,Halt & escalate,L10 Test,BMC,"SohuServerBmcFirmwareUpdate, SohuServerBiosUpdate, PsuFirmwareUpdate, CpldFirmwareUpdate, L10VBBUpdate"
+TH-BMC-0014-S4Q9,357105678,BMC_FIRMWARE_UPDATE_COMMAND_FAILED,The BMC firmware update command failed or did not complete successfully.,Halt & escalate,L10 Test,BMC,SohuServerBmcFirmwareUpdate
+TH-BMC-0015-S4Q9,357105679,BMC_POST_UPDATE_VERIFY_FAILED,The BMC did not report the requested firmware version after update.,Halt & escalate,L10 Test,BMC,SohuServerBmcFirmwareUpdate
+TH-BMC-0016-S4Q9,357105680,BMC_POWER_CYCLE_INTERVAL_SET_FAILED,The requested BMC power-cycle interval could not be configured.,Halt & escalate,L10 Test,BMC,SetPowerCycleInterval
+TH-BMC-0017-S4Q9,390660113,BMC_SYSTEM_EVENT_LOG_QUERY_FAILED,The BMC system-event log could not be read or parsed.,Halt & escalate,L10 Test,BMC,"StoreSystemLogStates, CheckSystemLogStates"
+TH-BMC-0018-S4Q9,373882898,BMC_CRITICAL_EVENT_DETECTED,A new critical BMC/SEL event was detected between the stored baseline and the post-test log state.,Halt & escalate,L10 Test,BMC,CheckSystemLogStates
+TH-BMC-0019-S4Q9,390660115,BMC_RAW_COMMAND_FAILED,A required low-level BMC raw command failed or returned no response.,Halt & escalate,L10 Test,BMC,"BmcCheck, BmcCheckFanLocation, BmcCheckFanControl"
+TH-BMC-0020-S5Q9,358154260,BMC_UPDATE_MODEL_CONFIG_UNAVAILABLE,The BMC update flow could not resolve the server model or target-specific update configuration.,Halt & escalate,L10 Test,BMC,"SohuServerBmcFirmwareUpdate, SohuServerBiosUpdate, PsuFirmwareUpdate, CpldFirmwareUpdate, L10VBBUpdate"
+TH-BIOS-0001-S5Q9,358154241,BIOS_EXPECTED_CONFIG_UNAVAILABLE,Expected BIOS version or boot-order configuration could not be loaded; no BIOS verdict is available.,Halt & escalate,L10 Test,BIOS,"CheckBiosVersion, CheckBiosBootOrder"
+TH-BIOS-0002-S4Q9,390660098,BIOS_VERSION_QUERY_FAILED,The running BIOS version could not be queried.,Halt & escalate,L10 Test,BIOS,CheckBiosVersion
+TH-BIOS-0003-S4Q9,390660099,BIOS_VERSION_OUTPUT_INVALID,"BIOS version output was empty, incomplete, or could not be parsed.",Halt & escalate,L10 Test,BIOS,CheckBiosVersion
+TH-BIOS-0004-S5Q9,358154244,BIOS_VERSION_MISMATCH,The running BIOS version does not match the expected L10 release.,Halt & escalate,L10 Test,BIOS,CheckBiosVersion
+TH-BIOS-0005-S4Q9,390660101,BIOS_BOOT_ORDER_QUERY_FAILED,The configured BIOS boot order could not be queried.,Halt & escalate,L10 Test,BIOS,CheckBiosBootOrder
+TH-BIOS-0006-S5Q9,358154246,BIOS_BOOT_ORDER_MISMATCH,The BIOS boot order does not match the required L10 configuration.,Halt & escalate,L10 Test,BIOS,CheckBiosBootOrder
+TH-BIOS-0007-S4Q9,357105671,BIOS_UPDATE_FAILED,The server BIOS update command failed or did not complete successfully.,Halt & escalate,L10 Test,BIOS,SohuServerBiosUpdate
+TH-BIOS-0008-S4Q9,357105672,BIOS_POST_UPDATE_VERIFY_FAILED,The BIOS did not report the requested version after update and reboot.,Halt & escalate,L10 Test,BIOS,SohuServerBiosUpdate
+TH-PWR-0007-S2Q9,371785735,UNEXPECTED_DVFS_RAMPDOWN,Unexpected DVFS rampdown event during workload,Halt & escalate,L10 Test,PWR,SohuPowerVirusMultiChipTestCase
+TH-PWR-0009-S4Q9,390660105,BMC_POWER_CYCLE_COMMAND_FAILED,The BMC power-cycle command returned a failure.,Halt & escalate,L10 Test,Power,BmcPowerCycle
+TH-PWR-0010-S2Q9,371785738,HOST_DID_NOT_POWER_OFF,The host remained reachable after the BMC power-off step and did not enter the expected off state.,Halt & escalate,L10 Test,Power,BmcPowerCycle
+TH-PWR-0011-S2Q9,371785739,HOST_DID_NOT_RECOVER_AFTER_POWER_CYCLE,The host did not become reachable within the configured interval after BMC power-on.,Halt & escalate,L10 Test,Power,BmcPowerCycle
+TH-PWR-0012-S4Q9,390660108,HOST_REBOOT_COMMAND_FAILED,The host reboot request failed before the reboot transition could be observed.,Halt & escalate,L10 Test,Power,SohuHostRebootTestCase
+TH-PWR-0013-S4Q9,373882893,HOST_REBOOT_NOT_OBSERVED,"The host never became unreachable after the reboot request, so the expected reboot transition was not observed.",Halt & escalate,L10 Test,Power,SohuHostRebootTestCase
+TH-PWR-0014-S2Q9,371785742,HOST_DID_NOT_RECOVER_AFTER_REBOOT,The host did not return to a reachable and usable state within the configured reboot recovery interval.,Halt & escalate,L10 Test,Power,SohuHostRebootTestCase
+TH-THM-0001-S2Q6,371589121,THERMAL_DIODE_READING_INVALID,"Thermal diode temperature reading out of the qualified range, reported invalid by the sensor, or an uncalibrated mezzanine diode reading below 0 C.",Retry,L10 Test,THM,SohuDtsMultiChipTestCase
+TH-THM-0002-S2Q6,371589122,DTS_SPREAD_EXCEEDED,The peak-to-peak spread across usable Sohu DTS readings exceeded the configured deviation limit.,Retry,L10 Test,THM,SohuDtsMultiChipTestCase
+TH-THM-0004-S2Q6,371589124,CATASTROPHIC_THERMAL_TRIP,Catastrophic trip event during stress workload,Retry,L10 Test,THM,SohuPowerVirusMultiChipTestCase
+TH-THM-0005-S4Q9,373882885,DTS_DEVIATION_UNDER_STRESS,DTS peak-to-peak deviation under power virus out of bounds,Halt & escalate,L10 Test,THM,SohuPowerVirusMultiChipTestCase
+TH-THM-0006-S2Q9,371785734,PEAK_DTS_TEMPERATURE_EXCEEDED,Peak DTS temperature under power virus exceeds expected maximum,Halt & escalate,L10 Test,THM,SohuPowerVirusMultiChipTestCase
+TH-THM-0008-S4Q9,357105672,FAN_LOCATION_MISMATCH,Fan location identifiers read back from the BMC do not match the configured physical fan positions.,Halt & escalate,L10 Test,Fan,BmcCheckFanLocation
+TH-THM-0009-S4Q9,373882889,FAN_PWM_SET_FAILED,The requested fan PWM value could not be applied through the BMC control interface.,Halt & escalate,L10 Test,Fan,BmcCheckFanControl
+TH-THM-0010-S2Q9,371785738,FAN_RPM_RESPONSE_OUT_OF_RANGE,A fan RPM reading is outside the expected range or does not increase as required after a PWM change.,Halt & escalate,L10 Test,Fan,BmcCheckFanControl
+TH-THM-0011-S4Q9,373882891,FAN_AUTOMATIC_MODE_RESTORE_FAILED,Fan control could not be returned to automatic mode after the manual fan test.,Halt & escalate,L10 Test,Fan,BmcCheckFanControl
+TH-FW-0001-S2Q9,355008513,SOHU_FIRMWARE_UPDATE_FAILED,Sohu app firmware update failed or ASIC not pingable after update,Halt & escalate,L10 Test,FW,MultiChipSohuHotReloadFirmwareUpdateTestCase
+TH-FW-0002-S4Q9,357105666,SOHU_FIRMWARE_HASH_MISMATCH,"The ASIC booted application firmware after the update, but the running image hash does not match the hash in the image package that was just staged.",Halt & escalate,L10 Test,FW,MultiChipSohuHotReloadFirmwareUpdateTestCase
+TH-FW-0005-S5Q2,357695493,FIXTURE_FIRMWARE_UPDATE_FAILED,"Fixture firmware update failed (golden VBB / retimer): OpenOCD flash, ST-Link adapter, post-flash UART/RPC ready check, or application firmware-hash verification did not succeed.",Warm Reboot,L10 Test,FW,L10VBBUpdate
+TH-FW-0006-S5Q9,358154246,DVFS_PROFILE_APPLY_FAILED,Board DVFS profile detection or application failed,Halt & escalate,L10 Test,FW,SohuSetClockProfileMultiChipTestCase
+TH-FW-0009-S5Q9,358154249,SOHU_HOT_RELOAD_INELIGIBLE,"Hot reload could not start, so no firmware was written",Halt & escalate,L10 Test,FW,MultiChipSohuHotReloadFirmwareUpdateTestCase
+TH-FW-0010-S5Q9,358154250,EXPECTED_VERSION_CONFIG_UNAVAILABLE,Expected host or component version data could not be loaded; no version verdict is available.,Halt & escalate,L10 Test,Firmware,"CheckOs, CheckKernelVersion, CheckSohuFwVersion, CheckPsuFirmwareVersion, CheckCpldBpFirmwareVersion"
+TH-FW-0011-S4Q9,390660107,HOST_OS_VERSION_QUERY_FAILED,The host operating-system release could not be queried.,Halt & escalate,L10 Test,Host OS,CheckOs
+TH-FW-0012-S4Q9,390660108,HOST_OS_VERSION_OUTPUT_INVALID,Operating-system release output was incomplete or could not be parsed.,Halt & escalate,L10 Test,Host OS,CheckOs
+TH-FW-0013-S5Q9,358154253,HOST_OS_VERSION_MISMATCH,The host operating-system release does not match the required L10 image.,Halt & escalate,L10 Test,Host OS,CheckOs
+TH-FW-0014-S4Q9,390660110,HOST_KERNEL_VERSION_QUERY_FAILED,The running host kernel version could not be queried.,Halt & escalate,L10 Test,Host Kernel,CheckKernelVersion
+TH-FW-0015-S4Q9,390660111,HOST_KERNEL_VERSION_OUTPUT_INVALID,Kernel version output was empty or could not be parsed.,Halt & escalate,L10 Test,Host Kernel,CheckKernelVersion
+TH-FW-0016-S5Q9,358154256,HOST_KERNEL_VERSION_MISMATCH,The running host kernel does not match the required L10 release.,Halt & escalate,L10 Test,Host Kernel,CheckKernelVersion
+TH-FW-0017-S4Q9,390660113,SOHU_FIRMWARE_VERSION_QUERY_FAILED,The running Sohu firmware version could not be queried.,Halt & escalate,L10 Test,Sohu Firmware,CheckSohuFwVersion
+TH-FW-0018-S5Q9,358154258,SOHU_FIRMWARE_VERSION_MISMATCH,The running Sohu firmware version does not match the required L10 release.,Halt & escalate,L10 Test,Sohu Firmware,CheckSohuFwVersion
+TH-FW-0019-S4Q9,390660115,PSU_FIRMWARE_VERSION_QUERY_FAILED,One or more PSU firmware versions could not be queried.,Halt & escalate,L10 Test,PSU Firmware,CheckPsuFirmwareVersion
+TH-FW-0020-S5Q9,358154260,PSU_FIRMWARE_VERSION_MISMATCH,A PSU firmware version does not match the required L10 release.,Halt & escalate,L10 Test,PSU Firmware,CheckPsuFirmwareVersion
+TH-FW-0021-S4Q9,390660117,CPLD_BP_FIRMWARE_VERSION_QUERY_FAILED,The backplane/CPLD firmware version could not be queried.,Halt & escalate,L10 Test,CPLD Firmware,CheckCpldBpFirmwareVersion
+TH-FW-0022-S5Q9,358154262,CPLD_BP_FIRMWARE_VERSION_MISMATCH,The backplane/CPLD firmware version does not match the required L10 release.,Halt & escalate,L10 Test,CPLD Firmware,CheckCpldBpFirmwareVersion
+TH-FW-0023-S4Q9,357105687,PSU_FIRMWARE_UPDATE_FAILED,The PSU firmware update command failed or did not complete successfully.,Halt & escalate,L10 Test,PSU Firmware,PsuFirmwareUpdate
+TH-FW-0024-S4Q9,357105688,PSU_POST_UPDATE_VERIFY_FAILED,A PSU did not report the requested firmware version after update.,Halt & escalate,L10 Test,PSU Firmware,PsuFirmwareUpdate
+TH-FW-0025-S4Q9,357105689,CPLD_FIRMWARE_UPDATE_FAILED,The CPLD/backplane firmware update command failed or did not complete successfully.,Halt & escalate,L10 Test,CPLD Firmware,CpldFirmwareUpdate
+TH-FW-0026-S4Q9,357105690,CPLD_POST_UPDATE_VERIFY_FAILED,The CPLD/backplane did not report the requested firmware version after update.,Halt & escalate,L10 Test,CPLD Firmware,CpldFirmwareUpdate
+TH-FW-0027-S4Q9,357105691,SOFTWARE_PROVISIONING_FAILED,The L10 host software provisioning workflow failed to apply the required software state.,Halt & escalate,L10 Test,Host Software,SoftwareProvisioning
+TH-FW-0028-S4Q9,390660124,LINUX_PACKAGE_INSTALL_FAILED,A required Linux package could not be installed or configured.,Halt & escalate,L10 Test,Host Software,InstallLinuxPackagesTestCase
+TH-FW-0029-S4Q9,357105693,SOHU_BOOTLOADER_UPDATE_FAILED,The Sohu bootloader update command failed or the device was not usable after programming.,Halt & escalate,L10 Test,Sohu Bootloader,UpdateSohuBootloader
+TH-FW-0030-S4Q9,357105694,SOHU_BOOTLOADER_POST_UPDATE_VERIFY_FAILED,The running Sohu bootloader does not match the requested image after update.,Halt & escalate,L10 Test,Sohu Bootloader,UpdateSohuBootloader
+TH-FW-0031-S4Q9,390660127,HOST_SYSTEM_LOG_CRITICAL_EVENT_DETECTED,"A new critical host kernel, service, or system event was detected after the L10 workload.",Halt & escalate,L10 Test,Host Software,CheckSystemLogStates
+TH-ENV-0001-S4Q9,289996801,HOST_OR_BMC_UNREACHABLE,"The station host or its BMC did not answer ping or SSH after boot, so no module test could start.",Halt & escalate,L10 Test,ENV,"SohuHostRebootTestCase, BmcPowerCycle, BmcConnectivityCheck"
+TH-ENV-0003-S4Q9,357105667,PLX_SWITCH_DISCOVERY_FAILED,PLX daemon reported no PEX switches,Halt & escalate,L10 Test,ENV,"CheckPlxDaemonFirmwareVersion, UpdatePlxDaemonFirmwareVersion"
+TH-ENV-0004-S4Q9,357105668,HOST_DRIVER_SETUP_FAILED,"A host driver/setup utility step failed: kernel module reload, PCIe teardown or bus rescan, sysfs parameter write, or log-reader activation returned non-zero.",Halt & escalate,L10 Test,ENV,"SoftwareProvisioning, BroadcomUpdateFwAndConfigure"
+TH-ENV-0005-S4Q9,289996805,MODEL_REGISTRY_MOUNT_FAILED,The model-registry NFS share could not be mounted or validated on the L10 host.,Halt & escalate,L10 Test,Model Registry,ModelRegistryNfsMountTestCase
+TH-ENV-0006-S5Q9,458817542,MODEL_ARTIFACT_UNAVAILABLE,A required model-registry artifact or model path is missing or unreadable.,Halt & escalate,L10 Test,Model Registry,"StageModelRegistryToShmTestCase, SohuMlpTp8TestCase, SohuLlama70bForwardIteratedTestCase, SohuLlama70bHp8ForwardIteratedTestCase, SohuLlamaTp8InferenceMaxTestCase, Llama8bFp8Tp1SmokeTestCase"
+TH-ENV-0007-S4Q9,424214535,MODEL_STAGE_TO_SHM_FAILED,The required model artifact could not be copied or staged into shared memory.,Halt & escalate,L10 Test,Shared Memory,StageModelRegistryToShmTestCase
+TH-ENV-0008-S4Q9,424214536,MODEL_SHM_CLEANUP_FAILED,The staged model could not be removed from shared memory during cleanup.,Halt & escalate,L10 Test,Shared Memory,FreeModelRegistryFromShmTestCase
+TH-HAR-0001-S4Q0,390070273,TEST_TIMEOUT,The test exceeded its configured timeout and was terminated before producing a verdict (ABORTED disposition).,No act,L10 Test,Harness,any L10 test case (harness-level)
+TH-HAR-0002-S5Q9,358154242,TEST_ARGS_INVALID,A test case was invoked with invalid or unsupported arguments and rejected the run before touching the DUT.,Halt & escalate,L10 Test,Harness,"CpuStress, MemoryStressNg, MemoryStress, IoStress, SohuSnapTestCase, ExecBinaryTestCase"
+TH-HAR-0003-S5Q9,358154243,TEST_DEPENDENCY_UNAVAILABLE,Tool/binary/data file the test depends on is missing on the test system (test-system ERROR — excluded from module yield),Halt & escalate,L10 Test,Harness,"CpuStress, MemoryStressNg, MemoryStress, IoStress, LoopbackTopologyTest, NetworkBwRdmaTest, ModelRegistryNfsMountTestCase, StageModelRegistryToShmTestCase, SohuServerBmcFirmwareUpdate, SohuServerBiosUpdate, PsuFirmwareUpdate, CpldFirmwareUpdate, L10VBBUpdate, InstallLinuxPackagesTestCase, UpdatePlxDaemonFirmwareVersion, BroadcomUpdateFwAndConfigure, UpdateSohuBootloader, MultiChipSohuHotReloadFirmwareUpdateTestCase, ExecBinaryTestCase"
+TH-HAR-0004-S4Q9,357105668,NESTED_SUITE_ORCHESTRATION_FAILED,Nested suite failed to launch or complete orchestration (child test failures carry their own codes),Halt & escalate,L10 Test,Harness,RunInStress
+TH-HAR-0005-S4Q6,390463493,TEST_TOOL_EXECUTION_FAILED,A test-owned command or binary failed to execute and did not produce a domain-specific DUT verdict.,Retry,L10 Test,Harness,"IoStress, ExecBinaryTestCase, CpldDiagnosticsRemoteTestCase"
+TH-HAR-0006-S4Q9,390660102,TEST_METRICS_PARSE_FAILED,"A test tool completed without complete, parseable metrics needed to determine the result.",Halt & escalate,L10 Test,Harness,"IoStress, ExecBinaryTestCase"
+TH-HAR-0007-S4Q9,390660103,TEST_OUTPUT_UNAVAILABLE,"Expected test output, state, or result artifacts were not produced.",Halt & escalate,L10 Test,Harness,"StoreSystemLogStates, CheckSystemLogStates, ExecBinaryTestCase"
+TH-HAR-0008-S5Q9,358154248,TEST_PRECONDITION_NOT_MET,"A required test precondition was not satisfied, so the test did not exercise the DUT as intended.",Halt & escalate,L10 Test,Harness,"RunInStress, IoStress, NetworkBwRdmaTest"
+TH-HAR-0009-S4Q9,390660105,TEST_CLEANUP_FAILED,"Test cleanup failed and may have left processes, mounts, namespaces, files, or device state behind.",Halt & escalate,L10 Test,Harness,"LoopbackTopologyTest, NetworkBwRdmaTest, FreeModelRegistryFromShmTestCase"
+TH-HAR-0010-S4Q9,390660106,SYSTEM_LOG_SNAPSHOT_FAILED,The pre-test system-log baseline could not be captured.,Halt & escalate,L10 Test,Harness,StoreSystemLogStates
+TH-HAR-0011-S4Q9,390660107,SYSTEM_LOG_COMPARE_FAILED,"System-log state could not be queried, parsed, or compared with the stored baseline.",Halt & escalate,L10 Test,Harness,CheckSystemLogStates
+TH-HAR-9998-S3Q0,271591182,TEST_FAILED_UNCLASSIFIED,A test returned TestFailedError without a specific TH identity; this catch-all is a taxonomy-health failure and must be replaced by a specific code.,No act,L10 Test,Harness,any L10 test case (harness-level)
+TH-HAR-9999-S3Q9,389621519,UNHANDLED_EXCEPTION,An unhandled exception escaped the test and was wrapped by the harness; the traceback is retained in the per-test log (ERROR disposition).,Halt & escalate,L10 Test,Harness,any L10 test case (harness-level)
+TH-INFRA-0001-S4Q9,424214529,RACKSIM_UNAVAILABLE,The configured racksim service or simulated server endpoint is unavailable.,Halt & escalate,L10 Test,Test Infrastructure,"RunInStress, ExecBinaryTestCase"
+TH-INFRA-0002-S4Q9,289996802,REMOTE_EXECUTION_TRANSPORT_FAILED,The infrastructure transport used to execute a remote L10 operation failed before a DUT verdict was obtained.,Halt & escalate,L10 Test,Test Infrastructure,"CpldDiagnosticsRemoteTestCase, ExecBinaryTestCase"
+TH-INFRA-0003-S4Q9,289996803,INFRA_NETWORK_PATH_UNAVAILABLE,"A required station-side network path, route, or service endpoint is unavailable.",Halt & escalate,L10 Test,Test Infrastructure,"ModelRegistryNfsMountTestCase, BmcConnectivityCheck"
+TH-INFRA-0004-S4Q9,424214532,TEST_RESOURCE_EXHAUSTED,A station-side resource limit prevented the L10 test from running or completing.,Halt & escalate,L10 Test,Test Infrastructure,"StageModelRegistryToShmTestCase, RunInStress"

@@ -44,6 +44,17 @@ font-weight:600;white-space:nowrap;border:1px solid var(--line);background:var(-
 .qa6{color:#1d7a4c;border-color:#1d7a4c55}
 .qa0{color:var(--muted)}
 .nyr{color:var(--muted);font-weight:500}
+.meta{background:var(--card);border:1px solid var(--line);border-radius:10px;
+padding:6px 18px;margin:20px 0 4px}
+.meta dl{display:grid;grid-template-columns:max-content 1fr;gap:0 20px;margin:0}
+.meta dt{color:var(--muted);font-size:.76rem;text-transform:uppercase;
+letter-spacing:.04em;font-weight:650;padding:7px 0;border-bottom:1px solid var(--line)}
+.meta dd{margin:0;padding:7px 0;font-size:.88rem;border-bottom:1px solid var(--line);
+overflow-wrap:anywhere}
+.meta dt:last-of-type,.meta dd:last-of-type{border-bottom:0}
+.meta .sub{font-size:.82rem}
+@media(max-width:560px){.meta dl{grid-template-columns:1fr;gap:0}
+.meta dt{padding-bottom:0;border-bottom:0}.meta dd{padding-top:2px}}
 .stats{display:flex;flex-wrap:wrap;gap:10px;margin:20px 0 4px}
 .stat{flex:1 1 120px;background:var(--card);border:1px solid var(--line);
 border-radius:8px;padding:12px 14px}
@@ -61,8 +72,9 @@ color:var(--muted);font-size:.82rem}
 <h1>32x Error Code Registry</h1>
 <p class="sub">Consolidated Etched test-harness error codes &mdash; MLT&nbsp;/&nbsp;1X, L10 and L11 &mdash;
 with revision history and original author per code. Field names and enum values follow
-<a href="https://github.com/etched-ai/sw/blob/master/host/system_test/error_codes/th_registry.yaml"><code>th_registry.yaml</code></a>
-(TH Error Code Specification v0.3 &sect;7, &sect;11.1), the source of truth.</p>
+<code>th_registry.yaml</code> (TH Error Code Specification v0.3 &sect;7, &sect;11.1), the source of truth.</p>
+
+<div class="meta"><dl><dt>Version</dt><dd><strong>v0.1</strong> of this page and repo &middot; source spreadsheet revision <strong>0.3</strong> &middot; every code at <code>version: 1</code></dd><dt>Repository</dt><dd><a href="https://github.com/etched-ai/32x-error-code">github.com/etched-ai/32x-error-code</a></dd><dt>Published at</dt><dd><a href="https://fantastic-telegram-38n6vyw.pages.github.io/">fantastic-telegram-38n6vyw.pages.github.io</a> <span class="sub">(private &mdash; Etched org members)</span></dd><dt>Original spreadsheet</dt><dd><a href="https://docs.google.com/spreadsheets/d/1zKcxEXyYFLAQkI0AnVtZnSQ7Z-sxGqzGBpc9-0qhrqk/edit?gid=1353335746">_Etched Error Code</a> <span class="sub">(Google Sheets)</span></dd><dt>Source of truth</dt><dd><a href="https://github.com/etched-ai/sw/blob/master/host/system_test/error_codes/th_registry.yaml"><code>etched-ai/sw</code> &rarr; <code>host/system_test/error_codes/th_registry.yaml</code></a></dd><dt>Slack</dt><dd><a href="https://etchedai.slack.com/archives/C0B299EA7UK">#error-code-define</a> &middot; <a href="https://etchedai.slack.com/archives/C0BMBRF327R">#tiger-error-code</a></dd><dt>Owner</dt><dd><code>supercomputing-sw</code></dd></dl></div>
 
 <div class="stats">
 <div class="stat"><div class="n">356</div><div class="l">error codes</div></div>
@@ -82,8 +94,10 @@ suffix carries severity and quick action; the stable identity is the <code>TH-&l
 <h2 id="download">Download the source workbook</h2><p class="sub">Everything on this page is generated from the two snapshots at the bottom of this list. Edit the workbook, commit it, re-run <code>gen.py</code>.</p><div class="scroll"><table>
 <thead><tr><th>File</th><th>What it is</th><th>Size</th></tr></thead>
 <tbody>
-<tr><td><a href="etched_error_code.xlsx"><strong>etched_error_code.xlsx</strong></a></td><td>Excel workbook &mdash; one sheet per source tab, filters and frozen headers on. The editable copy: change it, commit it, regenerate.</td><td>75 KB</td></tr>
-<tr><td><code>data/</code><br><a href="data/revision_history.csv">revision_history.csv</a><br><a href="data/mlt_1x.csv">mlt_1x.csv</a><br><a href="data/l10.csv">l10.csv</a><br><a href="data/l11.csv">l11.csv</a><br><a href="data/field_definitions.csv">field_definitions.csv</a><br><a href="data/error_id_encoding.csv">error_id_encoding.csv</a><br><a href="data/dri_ownership.csv">dri_ownership.csv</a><br><a href="data/source_data_notes.csv">source_data_notes.csv</a><br><a href="data/enum_legends.csv">enum_legends.csv</a></td><td>The same 9 tabs as CSV, one file per tab &mdash; so git diffs a revision line by line instead of as a binary blob.</td><td>9 files</td></tr>
+<tr><td><a href="etched_error_code.xlsx"><strong>etched_error_code.xlsx</strong></a></td><td>The source workbook &mdash; a mirror of the original spreadsheet. Same tabs in the same order, same columns, same rows, nothing added or reordered. This is the file to edit and commit.</td><td>47 KB</td></tr>
+<tr><td><a href="etched_error_code_annotated.xlsx">etched_error_code_annotated.xlsx</a></td><td>The same data with everything this page joins in &mdash; version, original author, severity/quick-action names, owner, <code>since</code>, registry status &mdash; plus autofilters and frozen headers.</td><td>75 KB</td></tr>
+<tr><td><code>data/source/</code><br><a href="data/source/revision_history.csv">revision_history.csv</a><br><a href="data/source/mlt_1x.csv">mlt_1x.csv</a><br><a href="data/source/l10.csv">l10.csv</a><br><a href="data/source/l11.csv">l11.csv</a><br><a href="data/source/field_definitions.csv">field_definitions.csv</a><br><a href="data/source/dri_ownership.csv">dri_ownership.csv</a><br><a href="data/source/suite_run_log.csv">suite_run_log.csv</a></td><td>Each source tab as CSV, verbatim &mdash; the diffable form of the workbook above.</td><td>7 files</td></tr>
+<tr><td><code>data/</code><br><a href="data/revision_history.csv">revision_history.csv</a><br><a href="data/mlt_1x.csv">mlt_1x.csv</a><br><a href="data/l10.csv">l10.csv</a><br><a href="data/l11.csv">l11.csv</a><br><a href="data/field_definitions.csv">field_definitions.csv</a><br><a href="data/error_id_encoding.csv">error_id_encoding.csv</a><br><a href="data/dri_ownership.csv">dri_ownership.csv</a><br><a href="data/source_data_notes.csv">source_data_notes.csv</a><br><a href="data/enum_legends.csv">enum_legends.csv</a></td><td>The 9 joined tabs as CSV &mdash; so git diffs a revision line by line instead of as a binary blob.</td><td>9 files</td></tr>
 <tr><td><a href="sheet.md">sheet.md</a></td><td>Verbatim export of the Google Sheet the tables were built from.</td><td>104 KB</td></tr>
 <tr><td><a href="th_registry.yaml">th_registry.yaml</a></td><td>Snapshot of the source of truth from <code>etched-ai/sw@master</code>.</td><td>144 KB</td></tr>
 </tbody></table></div>
@@ -634,7 +648,7 @@ registry plus the spreadsheet &mdash; regenerate rather than hand-edit.
 </div>
 
 <footer>
-Generated by <code>gen.py</code> from <code>th_registry.yaml</code> + the _Etched Error Code sheet.
+v0.1 &middot; generated by <code>gen.py</code> from <code>th_registry.yaml</code> + the _Etched Error Code sheet.
 Owner of the code space: <code>supercomputing-sw</code>. Codes marked
 <span class="badge nyr">sheet only</span> exist in the spreadsheet but are not yet in
 <code>th_registry.yaml</code>.
