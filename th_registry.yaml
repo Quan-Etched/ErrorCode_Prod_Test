@@ -1,0 +1,3206 @@
+# TH error-code registry (TH Error Code Specification v0.3 §7, §11.1).
+# Source of truth for codegen once CI lands; error_codes.py must stay in
+# sync (error_codes_test enforces it).
+#
+# Identity segments (e.g. TH-CPU-0001) are immutable: never renumber, never
+# reuse. A change of meaning requires a new code.
+#
+# TH-CPU-0002 (CPU_STRESS_PERF_BELOW_THRESHOLD) is reserved but NOT allocated:
+# CpuStress has no performance-threshold exit today. Allocate it only when
+# such a check is added.
+- error_code: TH-C2C-0001
+  name: C2C_LINKUP_FAILED
+  version: 1
+  category: 6  # CATEGORY_HARDWARE
+  severity: 2  # ERROR_ISOLATE
+  quick_action: 9  # QA_ESCALATE
+  component: 1X.C2C.SOHU_SERDES
+  test_cases: [C2cLinkupTestCase, C2cLinkupMultiChipTestCase, C2cThroughputTestCase, C2cThroughputMultiChipTestCase]
+  disposition: FAILED
+  retryable: false
+  max_auto_retry: 0
+  description: >
+    C2C lanes failed to train or link up within the timeout: RX equalization
+    did not converge after its configured attempts, or the link-up test
+    reported one or more datalinks/lanes down.
+  probable_causes:
+    - Marginal SERDES TX/RX lane on the module
+    - FIR taps from the preceding sweep not valid for this rate/FEC mode
+    - Loopback fixture or cable not seated on the station
+    - PHY configuration mismatch for the requested FEC mode
+  capture:
+    - suite_run_url
+    - link-up test output directory (per-lane PoR summary)
+    - affected datalinks/lanes in affected_instances
+    - fec_mode, phy_loopback_mode and mac_loopback flag for the run
+    - unit_sn, bios/fw_version, harness_version, station_id, operator_id, timestamp
+  repair_actions:
+    - {step: 1, who: operator, action: "Collect the suite/test logs and artifacts for this failure.", est_time_min: 5}
+    - {step: 2, who: escalate, action: "Escalate to Etched engineer with the collected logs.", ticket_template: ETCH}
+  owner: supercomputing-sw
+  doc_url: https://github.com/etched-ai/sw/blob/master/host/system_test/error_codes/doc/C2cLinkupTestCase.md#TH-C2C-0001
+  since: harness 2026.216
+  suspected_components: [SOHU_SERDES, C2C_LOOPBACK_FIXTURE]
+  vendor_error_id: []
+  jira_component: ETCH / MLT
+- error_code: TH-C2C-0002
+  name: C2C_LOOPBACK_DATA_INTEGRITY_MISMATCH
+  version: 1
+  category: 11  # CATEGORY_DATA
+  severity: 2  # ERROR_ISOLATE
+  quick_action: 9  # QA_ESCALATE
+  component: 1X.C2C.SOHU_SERDES
+  test_cases: [C2cIntegrityTestCase, C2cIntegrityMultiChipTestCase]
+  disposition: FAILED
+  retryable: false
+  max_auto_retry: 0
+  description: >
+    Bit-by-bit C2C loopback comparison found a data mismatch on at least one
+    datalink/lane.
+  probable_causes:
+    - Marginal SERDES lane corrupting data under load
+    - FEC not correcting at the configured rate for this lane
+    - Loopback lane map does not match the fixture wiring
+    - CSRAM/WDMA data path defect on the module
+  capture:
+    - suite_run_url
+    - integrity test output directory (per-lane error plots)
+    - per-lane mismatch data captured BEFORE any retry
+    - affected datalinks/lanes in affected_instances
+    - unit_sn, bios/fw_version, harness_version, station_id, operator_id, timestamp
+  repair_actions:
+    - {step: 1, who: operator, action: "Collect the suite/test logs and artifacts for this failure.", est_time_min: 5}
+    - {step: 2, who: escalate, action: "Escalate to Etched engineer with the collected logs.", ticket_template: ETCH}
+  owner: supercomputing-sw
+  doc_url: https://github.com/etched-ai/sw/blob/master/host/system_test/error_codes/doc/C2cIntegrityTestCase.md#TH-C2C-0002
+  since: harness 2026.216
+  suspected_components: [SOHU_SERDES, C2C_LOOPBACK_FIXTURE]
+  vendor_error_id: []
+  jira_component: ETCH / MLT
+- error_code: TH-C2C-0003
+  name: C2C_LOOPBACK_THROUGHPUT_BELOW_THRESHOLD
+  version: 1
+  category: 6  # CATEGORY_HARDWARE
+  severity: 2  # ERROR_ISOLATE
+  quick_action: 9  # QA_ESCALATE
+  component: 1X.C2C.SOHU_SERDES
+  test_cases: [C2cThroughputTestCase, C2cThroughputMultiChipTestCase]
+  disposition: FAILED
+  retryable: false
+  max_auto_retry: 0
+  description: >
+    The large C2C transfer did not meet its acceptance criteria: measured
+    throughput below the configured percentage of line rate (90% in the 1X
+    suite), or the post-FEC uncorrected error fraction above its limit.
+  probable_causes:
+    - Marginal SERDES lane forcing FEC retransmission/correction
+    - CSRAM PLL not held at the test frequency for the transfer
+    - DMA read arbiter FIFO depth misconfigured for the rate
+    - Loopback fixture insertion loss out of spec
+  capture:
+    - suite_run_url
+    - large-transfer output directory (throughput and post-FEC error counters)
+    - min_throughput_percent and max_post_fec_err_frac used for the run
+    - affected datalinks/lanes in affected_instances
+    - unit_sn, bios/fw_version, harness_version, station_id, operator_id, timestamp
+  repair_actions:
+    - {step: 1, who: operator, action: "Collect the suite/test logs and artifacts for this failure.", est_time_min: 5}
+    - {step: 2, who: escalate, action: "Escalate to Etched engineer with the collected logs.", ticket_template: ETCH}
+  owner: supercomputing-sw
+  doc_url: https://github.com/etched-ai/sw/blob/master/host/system_test/error_codes/doc/C2cThroughputTestCase.md#TH-C2C-0003
+  since: harness 2026.216
+  suspected_components: [SOHU_SERDES, C2C_LOOPBACK_FIXTURE]
+  vendor_error_id: []
+  jira_component: ETCH / MLT
+- error_code: TH-C2C-0004
+  name: C2C_LANE_MARGIN_BELOW_THRESHOLD
+  version: 1
+  category: 6  # CATEGORY_HARDWARE
+  severity: 4  # ERROR_TRIAGE -- threshold is tentative, needs engineering review
+  quick_action: 9  # QA_ESCALATE
+  component: 1X.C2C.SOHU_SERDES
+  test_cases: [C2cLaneMarginTestCase]
+  disposition: FAILED
+  retryable: false
+  max_auto_retry: 0
+  description: >
+    Worst per-lane minimum BER from the eye-diagram sweep exceeded the
+    configured ber_threshold. The SERDES margin spec is not final, so this code
+    is severity 4 (triage) rather than a straight isolate: confirm against the
+    current spec before dispositioning a module.
+  probable_causes:
+    - Marginal SERDES lane (closed eye) on the module
+    - Eye-diagram sweep threshold tighter than the (unfinalized) SERDES spec
+    - PRBS pattern or rate not matched to the station fixture
+    - Loopback fixture insertion loss out of spec
+  capture:
+    - suite_run_url
+    - eye-diagram sweep output directory (per-lane BER matrices)
+    - lane_margin_worst_min_ber measurement and per-lane breakdown
+    - affected lanes in affected_instances
+    - unit_sn, bios/fw_version, harness_version, station_id, operator_id, timestamp
+  repair_actions:
+    - {step: 1, who: operator, action: "Collect the suite/test logs and artifacts for this failure.", est_time_min: 5}
+    - {step: 2, who: escalate, action: "Escalate to Etched engineer with the collected logs.", ticket_template: ETCH}
+  owner: supercomputing-sw
+  doc_url: https://github.com/etched-ai/sw/blob/master/host/system_test/error_codes/doc/C2cLaneMarginTestCase.md#TH-C2C-0004
+  since: harness 2026.216
+  suspected_components: [SOHU_SERDES, C2C_LOOPBACK_FIXTURE]
+  vendor_error_id: []
+  jira_component: ETCH / MLT
+- error_code: TH-C2C-0005
+  name: C2C_PRBS_ERROR_THRESHOLD_EXCEEDED
+  version: 1
+  category: 11  # CATEGORY_DATA
+  severity: 2  # ERROR_ISOLATE
+  quick_action: 9  # QA_ESCALATE
+  component: 1X.C2C.SOHU_SERDES
+  test_cases: [C2cPrbsLoopbackTestCase, C2cPrbsMultiChipTestCase]
+  disposition: FAILED
+  retryable: false
+  max_auto_retry: 0
+  description: >
+    The C2C PRBS run completed but the measured pre-FEC bit-error rate exceeded
+    max_pre_fec_ber on at least one lane.
+  probable_causes:
+    - Marginal SERDES TX/RX lane on the module
+    - FIR taps from the preceding sweep not valid for this rate/FEC mode
+    - Loopback fixture or cable not seated on the station
+  capture:
+    - suite_run_url
+    - rx_bist_results.csv (per-lane BER from the RX BIST run)
+    - rx_bist_results_heatmap.png
+    - ber_max and the configured max_pre_fec_ber threshold
+    - affected datalinks/lanes in affected_instances
+    - unit_sn, bios/fw_version, harness_version, station_id, operator_id, timestamp
+  repair_actions:
+    - {step: 1, who: operator, action: "Collect the suite/test logs and artifacts for this failure.", est_time_min: 5}
+    - {step: 2, who: escalate, action: "Escalate to Etched engineer with the collected logs.", ticket_template: ETCH}
+  owner: supercomputing-sw
+  doc_url: ""
+  since: harness 2026.216
+  suspected_components: [SOHU_SERDES, C2C_LOOPBACK_FIXTURE]
+  vendor_error_id: []
+  jira_component: ETCH / MLT
+- error_code: TH-C2C-0009
+  name: C2C_LINK_STABILITY_FAILED
+  version: 1
+  category: 6  # CATEGORY_HARDWARE
+  severity: 2  # ERROR_ISOLATE
+  quick_action: 9  # QA_ESCALATE
+  component: 1X.C2C.SOHU_SERDES
+  test_cases: [C2cLinkStabilityMultiChipTestCase]
+  disposition: FAILED
+  retryable: false
+  max_auto_retry: 0
+  description: >
+    A C2C lane lost lock in the stability test and went link down. This is a risk for kayak and this should be investigated.
+  probable_causes:
+    - Loss of receiver clock recovery (CDR) mid-way through the test.
+  capture:
+    - suite_run_url
+    - link-stability test output including initial and final link-down counters
+    - affected datalinks/lanes in affected_instances
+    - duration_s, interval_s, fec_mode and PHY lane selection for the run
+    - unit_sn, bios/fw_version, harness_version, station_id, operator_id, timestamp
+  repair_actions:
+    - {step: 1, who: operator, action: "Collect the suite/test logs and artifacts for this failure.", est_time_min: 5}
+    - {step: 2, who: escalate, action: "Escalate to Etched engineer with the collected logs.", ticket_template: ETCH}
+  owner: accelerator-sw
+  doc_url: https://docs.google.com/document/d/1-_YC_cXvi3FtKd51jIetY9pER8JtCxH5dBE9UvndZWU/edit
+  since: harness 2026.229
+  suspected_components: [SOHU_SERDES]
+  vendor_error_id: []
+  jira_component: ETCH / l10-test
+- error_code: TH-CPU-0001
+  name: CPU_STRESS_FAIL
+  version: 1
+  category: 6  # CATEGORY_HARDWARE
+  severity: 2  # ERROR_ISOLATE
+  quick_action: 6  # QA_RETRY, falls back to QA 9 on budget exhaustion
+  component: L10.CPU.HOST_CPU
+  test_cases: [CpuStress]
+  disposition: FAILED
+  retryable: true
+  max_auto_retry: 1
+  description: >
+    stress-ng exited with status 2 because one or more CPU stressors failed
+    or --verify detected a compute error.
+  probable_causes:
+    - Marginal/defective CPU core producing compute errors under load
+    - Inadequate cooling or heatsink mounting (thermal events during stress)
+    - VRM / power delivery instability under full-core load
+    - BIOS power/performance settings out of spec
+  capture:
+    - suite_run_url
+    - full stress-ng stdout/stderr (incl. bogo-ops metrics)
+    - dmesg / MCE excerpt for the run window
+    - CPU frequency + thermal telemetry during the run
+    - unit_sn, bios/fw_version, harness_version, station_id, operator_id, timestamp
+  repair_actions:
+    - {step: 1, who: operator, action: "Verify station ambient/airflow nominal, rerun CPU subset.", retest: CPU_subset, est_time_min: 5}
+    - {step: 2, who: technician, action: "Inspect heatsink mounting and TIM per assembly SOP; remount if out of spec.", retest: CPU_subset, est_time_min: 15}
+    - {step: 3, who: escalate, action: "Preserve unit; attach stress-ng logs + MCE excerpt; route to FA; open Jira.", retest: n/a, stop_condition: "No further rework before root cause confirmed.", ticket_template: ETCH}
+  owner: supercomputing-sw
+  doc_url: https://github.com/etched-ai/sw/blob/master/host/system_test/error_codes/doc/CpuStress.md#TH-CPU-0001
+  since: harness 2026.212
+  suspected_components: [HOST_CPU, CPU_COOLER, VRM]
+  vendor_error_id: []
+  jira_component: ETCH / l10-test
+
+# Tool absence is a provisioning problem, not a DUT hardware failure:
+# disposition ERROR keeps it out of DUT yield (spec §1 goal 4), QA 9 hands
+# straight to human repair (retry cannot install a package).
+- error_code: TH-CPU-0003
+  name: CPU_STRESS_TOOL_UNAVAILABLE
+  version: 1
+  category: 7  # CATEGORY_SOFTWARE — tool/provisioning, not device fault
+  severity: 5  # ERROR_CONFIG — resolvable by (re)installing the package
+  quick_action: 9  # QA_ESCALATE — retry cannot fix a missing binary
+  component: L10.CPU.HOST_CPU
+  test_cases: [CpuStress]
+  disposition: ERROR  # test-system/provisioning problem; excluded from DUT yield
+  retryable: false
+  max_auto_retry: 0
+  description: >
+    stress-ng is not installed or not runnable on the target, so the CPU
+    stress run could not start.
+  probable_causes:
+    - DUT image missing the stress-ng package (provisioning gap)
+    - InstallLinuxPackagesTestCase not run or failed earlier in the suite
+    - Broken PATH or corrupted stress-ng binary on the target
+  capture:
+    - suite_run_url
+    - stderr of the stress-ng version probe
+    - unit_sn, bios/fw_version, harness_version, station_id, operator_id, timestamp
+  repair_actions:
+    - {step: 1, who: operator, action: "Install stress-ng on the target (or rerun the package-install step), rerun CPU subset.", retest: CPU_subset, est_time_min: 5}
+    - {step: 2, who: escalate, action: "If provisioning image is missing the package, route to test-infra; open Jira. Do NOT route the unit to rework or FA.", ticket_template: ETCH}
+  owner: supercomputing-sw
+  doc_url: https://github.com/etched-ai/sw/blob/master/host/system_test/error_codes/doc/CpuStress.md#TH-CPU-0003
+  since: harness 2026.212
+  suspected_components: []
+  vendor_error_id: []
+  jira_component: ETCH / l10-test
+
+# stress-ng ran but exited non-zero for a reason OTHER than a stressor /
+# verification failure (exit code != 2): bad options, resource or
+# initialization failures, unsupported stressors, or abnormal termination.
+- error_code: TH-CPU-0004
+  name: CPU_STRESS_EXECUTION_ERROR
+  version: 1
+  category: 7  # CATEGORY_SOFTWARE — invocation/environment, not a device verdict
+  severity: 4  # ERROR_TRIAGE — needs engineering disposition before proceeding
+  quick_action: 6  # QA_RETRY once (transient resource issues), then QA 9
+  component: L10.CPU.HOST_CPU
+  test_cases: [CpuStress]
+  disposition: ERROR  # cannot conclude a DUT failure from a launch error
+  retryable: true
+  max_auto_retry: 1
+  description: >
+    stress-ng exited non-zero with a status other than 2:
+    1 = option or harness error, 3 = initialization/resource failure,
+    4 = stressor not implemented on this platform, 5 = unexpected signal,
+    6 = unexpected exit, and 7 = untrustworthy metrics. The result is
+    inconclusive; do not isolate the unit on this code alone.
+  probable_causes:
+    - stress-ng version on the DUT does not support a requested option/method
+    - Insufficient memory/resources on the DUT to launch stressors
+    - stress-ng killed by an external signal (OOM killer, session teardown)
+  capture:
+    - suite_run_url
+    - full stress-ng stdout/stderr and exit code
+    - dmesg excerpt for the run window (OOM / signal evidence)
+    - unit_sn, bios/fw_version, harness_version, station_id, operator_id, timestamp
+  repair_actions:
+    - {step: 1, who: operator, action: "Confirm no other workload active on the DUT, rerun CPU subset.", retest: CPU_subset, est_time_min: 5}
+    - {step: 2, who: escalate, action: "Route logs to engineering triage with the stress-ng exit code and dmesg excerpt.", retest: n/a, ticket_template: ETCH}
+  owner: supercomputing-sw
+  doc_url: https://github.com/etched-ai/sw/blob/master/host/system_test/error_codes/doc/CpuStress.md#TH-CPU-0004
+  since: harness 2026.212
+  suspected_components: []
+  vendor_error_id: []
+  jira_component: ETCH / l10-test
+- error_code: TH-DMA-0001
+  name: DMA_DATA_PATH_FAIL
+  version: 1
+  category: 6  # CATEGORY_HARDWARE
+  severity: 2  # ERROR_ISOLATE
+  quick_action: 6  # QA_RETRY
+  component: 1X.DMA.HOST_CHIP_PATH
+  test_cases: [SohuDmaTestCase]
+  disposition: FAILED
+  retryable: true
+  max_auto_retry: 3
+  description: >
+    Host-chip DMA data-path test failure: dma_test_app reported a data
+    verification or March C+ failure on an SRAM region (RopeSram /
+    CentralSram), or failed in a way its output does not attribute to a
+    more specific PCIe/HBM failure mode (fallback for this test).
+  probable_causes:
+    - Marginal PCIe or on-chip data path corrupting DMA transfers
+    - Stuck or transition-faulty bits in the target SRAM region
+    - DMA engine / descriptor handling fault
+  capture:
+    - suite_run_url
+    - full dma_test_app stdout/stderr, exit code, and RNG seed
+    - unit_sn, fw_version, harness_version, station_id, operator_id, timestamp
+  repair_actions:
+    - {step: 1, who: operator, action: "Suspected test issue (single chip test timeout took down the station), retest once.", retest: affected_subset, est_time_min: 10}
+  owner: supercomputing-sw
+  doc_url: https://github.com/etched-ai/sw/blob/master/host/system_test/error_codes/doc/SohuDmaTestCase.md#TH-DMA-0001
+  since: harness 2026.216
+  suspected_components: [SOHU_ASIC, MEZZ_MODULE]
+  vendor_error_id: []
+  jira_component: ETCH / l10-test
+
+# Allocation only: the sheet lists host_boot against this row, but no such test
+# case exists in the harness yet. Emission lands with that test case; the code is
+# allocated now so the identity is reserved and the SOP is reviewable.
+- error_code: TH-ENV-0001
+  name: HOST_NOT_REACHABLE_AFTER_BOOT
+  version: 1
+  category: 1  # CATEGORY_NETWORK
+  severity: 4  # ERROR_TRIAGE
+  quick_action: 9  # QA_ESCALATE -- retry cannot fix station cabling
+  component: 1X.ENV.STATION_HOST
+  test_cases: []  # host_boot not yet implemented in the harness
+  disposition: ERROR  # test-system problem; excluded from module yield
+  retryable: false
+  max_auto_retry: 0
+  description: >
+    The station host or its BMC did not answer ping or SSH after boot, so no
+    module test could start. This is a test-system condition, not a module
+    verdict.
+  probable_causes:
+    - Station host powered off or stuck before the OS came up
+    - BMC network or management cabling fault
+    - sshd not running or host key changed on the station host
+    - Station host IP/DHCP reservation changed
+  capture:
+    - suite_run_url
+    - ping and ssh transcript for the station host and its BMC
+    - station_id, harness_version, operator_id, timestamp
+  repair_actions:
+    - {step: 1, who: operator, action: "Connect a monitor to the Devkit and verify that the system boots successfully, then try ping with host / BMC."}
+    - {step: 2, who: operator, action: "Collect the suite/test logs and artifacts for this failure.", est_time_min: 5}
+    - {step: 3, who: escalate, action: "Escalate to Etched engineer with the collected logs.", ticket_template: ETCH}
+  owner: supercomputing-sw
+  doc_url: https://github.com/etched-ai/sw/blob/master/host/system_test/error_codes/doc/Harness.md#TH-ENV-0001
+  since: harness 2026.216
+  suspected_components: []
+  vendor_error_id: []
+  jira_component: ETCH / MLT
+- error_code: TH-ENV-0002
+  name: STATION_FIXTURE_SETUP_CHECK_FAILED
+  version: 1
+  category: 5  # CATEGORY_CONFIG
+  severity: 4  # ERROR_TRIAGE
+  quick_action: 9  # QA_ESCALATE
+  component: 1X.ENV.STATION_FIXTURE
+  test_cases: [ChromaTelemetryCheckTestCase, EvalBoardPowerTestCase, VfioProxyVersionTestCase, CheckPexFirmwareVersionTestCase]
+  disposition: ERROR
+  retryable: false
+  max_auto_retry: 0
+  description: >
+    Station fixture/setup check failed (Chroma telemetry / eval board power /
+    vfio-proxy version query or mismatch / PEX version).
+  probable_causes:
+    - Station fixture or setup is not ready for module testing
+    - vfio-proxy gRPC unreachable or reporting unexpected version
+  capture:
+    - suite_run_url
+    - per-test log and transcript
+    - harness_version, station_id, operator_id, timestamp
+  repair_actions:
+    - {step: 1, who: operator, action: "Collect the suite/test logs and artifacts for this failure.", est_time_min: 5}
+    - {step: 2, who: escalate, action: "Escalate to Etched engineer with the collected logs. DO NOT retest.", ticket_template: ETCH}
+  owner: supercomputing-sw
+  doc_url: https://github.com/etched-ai/sw/blob/master/host/system_test/error_codes/doc/ChromaTelemetryCheckTestCase.md#TH-ENV-0002
+  since: harness 2026.216
+  suspected_components: []
+  vendor_error_id: []
+  jira_component: ETCH / MLT
+- error_code: TH-ENV-0003
+  name: PLX_DAEMON_NO_PEX_SWITCHES
+  version: 1
+  category: 5  # CATEGORY_CONFIG
+  severity: 4  # ERROR_TRIAGE
+  quick_action: 9  # QA_ESCALATE
+  component: 1X.ENV.PEX_SWITCH
+  test_cases: [CheckPexFirmwareVersionTestCase]
+  disposition: ERROR
+  retryable: false
+  max_auto_retry: 0
+  description: PLX daemon reported no PEX switches.
+  probable_causes:
+    - VBB MCU firmware is not updated to the required version
+    - PEX switches are unavailable to the PLX daemon
+  capture:
+    - suite_run_url
+    - per-test log and transcript
+    - VBB MCU firmware version
+    - harness_version, station_id, operator_id, timestamp
+  repair_actions:
+    - {step: 1, who: operator, action: "Collect the suite/test logs and artifacts for this failure.", est_time_min: 5}
+    - {step: 2, who: escalate, action: "Escalate to Etched engineer with the collected logs. DO NOT retest.", ticket_template: ETCH}
+  owner: supercomputing-sw
+  doc_url: https://github.com/etched-ai/sw/blob/master/host/system_test/error_codes/doc/CheckPexFirmwareVersionTestCase.md#TH-ENV-0003
+  since: harness 2026.216
+  suspected_components: []
+  vendor_error_id: []
+  jira_component: ETCH / l10-test  # known bugs: ETCH-35552
+
+# Host-side setup steps (module reload, PCIe teardown, sysfs driver
+# parameters, log-reader activation) run against the station host, not the
+# module: a failure says nothing about the DUT, so disposition ERROR keeps it
+# out of module yield.
+- error_code: TH-ENV-0004
+  name: HOST_SETUP_STEP_FAILED
+  version: 1
+  category: 5  # CATEGORY_CONFIG
+  severity: 4  # ERROR_TRIAGE
+  quick_action: 9  # QA_ESCALATE
+  component: 1X.ENV.HOST_SETUP
+  test_cases: [ReloadKernelModuleTestCase, PcieTeardownTestCase, PcieRescanTestCase, SetSkipFlrOnOpenCloseTestCase, SohuLogReaderActivateTestCase, LogReaderCaptureTestCase, PublishBootloaderTypeTestCase]
+  disposition: ERROR  # station host environment problem; excluded from DUT yield
+  retryable: false
+  max_auto_retry: 0
+  description: >
+    A host driver/setup utility step failed: a kernel module reload, PCIe
+    teardown or bus rescan, sohu_mdev sysfs parameter write, or log-reader
+    activation returned non-zero on the station host.
+  probable_causes:
+    - sohu_mdev kernel module not loaded, or loaded at a version without the expected parameter
+    - Missing sudo/permissions for the setup command on the station host
+    - Earlier setup step in the suite failed and left the host in an unexpected state
+    - Host tooling (driver package, log reader) not provisioned on this station
+    - /sys/bus/pci/rescan write failed
+  capture:
+    - suite_run_url
+    - exact command, exit code, stdout and stderr of the failing setup step
+    - lsmod / modinfo output for sohu_mdev
+    - dmesg excerpt for the run window
+    - harness_version, station_id, operator_id, timestamp
+  repair_actions:
+    - {step: 1, who: operator, action: "Collect the suite/test logs and artifacts for this failure.", est_time_min: 5}
+    - {step: 2, who: escalate, action: "Escalate to Etched engineer with the collected logs. DO NOT retest.", ticket_template: ETCH}
+  owner: supercomputing-sw
+  doc_url: https://github.com/etched-ai/sw/blob/master/host/system_test/error_codes/doc/ReloadKernelModuleTestCase.md#TH-ENV-0004
+  since: harness 2026.216
+  suspected_components: []
+  vendor_error_id: []
+  jira_component: ETCH / 1x-module-test
+- error_code: TH-FW-0001
+  name: SOHU_FIRMWARE_UPDATE_FAILED
+  version: 1
+  category: 5  # CATEGORY_CONFIG
+  severity: 2  # ERROR_ISOLATE
+  quick_action: 9  # QA_ESCALATE -- capture UART before any further action
+  component: 1X.FW.SOHU_APP_FIRMWARE
+  test_cases: [SohuFirmwareUpdateTestCase, SohuHotReloadFirmwareUpdateTestCase, SohuSecureBootRecoveryUpdateTestCase]
+  disposition: FAILED
+  retryable: false
+  max_auto_retry: 0
+  description: >
+    The Sohu application firmware update did not complete: loading or executing
+    the image package raised, the ASIC did not become pingable afterwards, or
+    the ASIC came back without reporting application firmware. For the
+    hot-reload case it also covers the pre-update eligibility outcomes, where
+    nothing was flashed at all — the chip is running a legacy bootloader, is in
+    bootloader mode with no application PLDM endpoint, or the precheck could not
+    read the running versions over RPC/proxy.
+  probable_causes:
+    - Image package rejected by the bootloader (bad signature or layout)
+    - ASIC hung during the jump to application firmware
+    - Mezzanine/VBB comms lost mid-update
+    - Suite ran the hot reload before secure_bootloader and an application firmware were in place
+    - Power sequencing fault during the update
+  capture:
+    - suite_run_url
+    - mezz and VBB UART logs across the update window
+    - version info before the update
+    - image package path and release id
+    - unit_sn, bios/fw_version, harness_version, station_id, operator_id, timestamp
+  repair_actions:
+    - {step: 1, who: operator, action: "Collect the suite/test logs and artifacts for this failure.", est_time_min: 5}
+    - {step: 2, who: escalate, action: "Escalate to Etched engineer with the collected logs.", ticket_template: ETCH}
+  owner: supercomputing-sw
+  doc_url: https://github.com/etched-ai/sw/blob/master/host/system_test/error_codes/doc/SohuFirmwareUpdateTestCase.md#TH-FW-0001
+  since: harness 2026.216
+  suspected_components: [SOHU_APP_FIRMWARE, SOHU_BOOTLOADER, MEZZANINE]
+  vendor_error_id: []
+  jira_component: ETCH / MLT
+- error_code: TH-FW-0002
+  name: SOHU_FIRMWARE_IMAGE_HASH_MISMATCH
+  version: 1
+  category: 5  # CATEGORY_CONFIG
+  severity: 4  # ERROR_TRIAGE -- staged image vs release, not a device fault
+  quick_action: 9  # QA_ESCALATE -- retry reflashes the same image
+  component: 1X.FW.SOHU_APP_FIRMWARE
+  test_cases: [SohuFirmwareUpdateTestCase]
+  disposition: ERROR  # station/staging problem; excluded from DUT yield
+  retryable: false
+  max_auto_retry: 0
+  description: >
+    The ASIC booted application firmware after the update, but the running
+    image hash from get_version_info() does not match the hash in the image
+    package that was just staged.
+  probable_causes:
+    - Station staged an image package from a different release
+    - Update silently fell back to a previously flashed image
+    - Image package metadata (version info) does not match its payload
+    - QSPI/bootloader served a stale image
+  capture:
+    - suite_run_url
+    - expected hash (from the image package) and the running hash
+    - image package path and release id
+    - version info before and after the update
+    - unit_sn, bios/fw_version, harness_version, station_id, operator_id, timestamp
+  repair_actions:
+    - {step: 1, who: operator, action: "Collect the suite/test logs and artifacts for this failure.", est_time_min: 5}
+    - {step: 2, who: escalate, action: "Escalate to Etched engineer with the collected logs.", ticket_template: ETCH}
+  owner: supercomputing-sw
+  doc_url: https://github.com/etched-ai/sw/blob/master/host/system_test/error_codes/doc/SohuFirmwareUpdateTestCase.md#TH-FW-0002
+  since: harness 2026.216
+  suspected_components: [SOHU_APP_FIRMWARE, STATION_IMAGE_STAGING]
+  vendor_error_id: []
+  jira_component: ETCH / MLT
+- error_code: TH-FW-0003
+  name: BOOTLOADER_PROGRAMMING_FAILED
+  version: 1
+  category: 6  # CATEGORY_HARDWARE
+  severity: 2  # ERROR_ISOLATE
+  quick_action: 6  # QA_RETRY
+  component: 1X.FW.BOOTLOADER
+  test_cases: [ProgramSecureBootloaderTestCase, BootloaderResultTestCase]
+  disposition: FAILED
+  retryable: true
+  max_auto_retry: 3
+  description: Bootloader programming failed (flash program fail or no ping after program).
+  probable_causes:
+    - Bootloader flash programming failed
+    - ASIC did not respond after programming
+  capture:
+    - suite_run_url
+    - per-test log and transcript
+    - bootloader programming transcript
+    - harness_version, station_id, operator_id, timestamp
+  repair_actions:
+    - {step: 1, who: operator, action: "Verify that the green power indicators on the Sohu module are ON.", est_time_min: 5}
+    - {step: 2, who: operator, action: "Verify that both the PCIe cable and power cable are connected correctly and securely.", est_time_min: 5}
+    - {step: 3, who: operator, action: "If there is no trouble found, retest once.", retest: affected_subset, est_time_min: 10}
+  owner: supercomputing-sw
+  doc_url: https://github.com/etched-ai/sw/blob/master/host/system_test/error_codes/doc/ProgramSecureBootloaderTestCase.md#TH-FW-0003
+  since: harness 2026.217
+  suspected_components: [FW]
+  vendor_error_id: []
+  jira_component: ETCH / l10-test  # known bugs: ETCH-35585
+- error_code: TH-FW-0004
+  name: JTAG_IMAGE_LOAD_VERIFY_FAILED
+  version: 1
+  category: 6  # CATEGORY_HARDWARE
+  severity: 4  # ERROR_TRIAGE
+  quick_action: 6  # QA_RETRY
+  component: 1X.FW.JTAG
+  test_cases: [ProgramSecureBootloaderTestCase, BootloaderResultTestCase]
+  disposition: FAILED
+  retryable: true
+  max_auto_retry: 1
+  description: JTAG image load/verify failed (ICCM verify mismatch).
+  probable_causes:
+    - JTAG image load or ICCM verification failed
+  capture:
+    - suite_run_url
+    - per-test log and transcript
+    - OpenOCD transcript
+    - harness_version, station_id, operator_id, timestamp
+  repair_actions:
+    - {step: 1, who: operator, action: "Suspected test issue, retest once.", retest: affected_subset, est_time_min: 10}
+  owner: supercomputing-sw
+  doc_url: https://github.com/etched-ai/sw/blob/master/host/system_test/error_codes/doc/ProgramSecureBootloaderTestCase.md#TH-FW-0004
+  since: harness 2026.217
+  suspected_components: [FW]
+  vendor_error_id: []
+  jira_component: ETCH / l10-test
+- error_code: TH-FW-0005
+  name: FIXTURE_FIRMWARE_UPDATE_FAILED
+  version: 1
+  category: 5  # CATEGORY_CONFIG
+  severity: 5  # ERROR_CONFIG
+  quick_action: 2  # QA_WARM_REBOOT — targets the fixture, not the DUT (spec §6)
+  component: 1X.FW.FIXTURE
+  test_cases: [VbbFirmwareUpdateTestCase, RetimerFirmwareUpdateTestCase]
+  disposition: ERROR
+  retryable: false
+  max_auto_retry: 0
+  description: >
+    Fixture firmware update failed (golden VBB / retimer): OpenOCD flash,
+    ST-Link adapter, post-flash UART/RPC ready check, or application
+    firmware-hash verification did not succeed.
+  probable_causes:
+    - Fixture firmware update or verification failed
+    - ST-Link / OpenOCD flash failure on the VBB MCU
+    - VBB UART unavailable or RPC unresponsive after reboot
+    - Flashed image hash does not match the running application
+  capture:
+    - suite_run_url
+    - per-test log and transcript
+    - firmware update transcript
+    - OpenOCD transcript when flash fails
+    - harness_version, station_id, operator_id, timestamp
+  repair_actions:
+    - {step: 1, who: operator, action: "Reboot Devkit, retest once.", retest: affected_subset, est_time_min: 10}
+  owner: supercomputing-sw
+  doc_url: https://github.com/etched-ai/sw/blob/master/host/system_test/error_codes/doc/VbbFirmwareUpdateTestCase.md#TH-FW-0005
+  since: harness 2026.217
+  suspected_components: [VBB]
+  vendor_error_id: []
+  jira_component: ETCH / 1x-module-test
+- error_code: TH-FW-0006
+  name: BOARD_DVFS_PROFILE_FAILED
+  version: 1
+  category: 5  # CATEGORY_CONFIG
+  severity: 5  # ERROR_CONFIG
+  quick_action: 9  # QA_ESCALATE
+  component: 1X.FW.DVFS_PROFILE
+  test_cases: [DetectBoardDvfsProfileTestCase]
+  disposition: FAILED
+  retryable: false
+  max_auto_retry: 0
+  description: >
+    Board DVFS profile detection or application failed.
+  probable_causes:
+    - Profile missing for this board revision
+    - Board ID readback fault
+  capture:
+    - suite_run_url
+    - per-test log and transcript
+    - unit_sn, fw_version, harness_version, station_id, operator_id, timestamp
+  repair_actions:
+    - {step: 1, who: operator, action: "Collect the suite/test logs and artifacts for this failure.", est_time_min: 5}
+    - {step: 2, who: escalate, action: "Escalate to Etched engineer with the collected logs.", ticket_template: ETCH}
+  owner: supercomputing-sw
+  doc_url: https://github.com/etched-ai/sw/blob/master/host/system_test/error_codes/doc/DetectBoardDvfsProfileTestCase.md#TH-FW-0006
+  since: harness 2026.216
+  suspected_components: []
+  vendor_error_id: []
+  jira_component: ETCH / l10-test
+- error_code: TH-FW-0007
+  name: SECURE_BOOT_RECOVERY_UPDATE_TIMEOUT
+  version: 1
+  category: 5  # CATEGORY_CONFIG — FW subsystem default (spec §3)
+  severity: 2  # ERROR_ISOLATE
+  quick_action: 6  # QA_RETRY
+  component: MLT.FW.SOHU_CHIP  # 1X Module Test (MLT) station, not L10
+  test_cases: [SohuSecureBootRecoveryUpdateTestCase]
+  disposition: FAILED
+  retryable: true
+  max_auto_retry: 1  # rerun once only - device may be mid-update
+  description: >
+    The PLDM Update Agent did not complete within pldm_update_timeout_s
+    during a secure-boot recovery update - the device is likely not
+    responding over the Sohu UART in recovery mode.
+  probable_causes:
+    - Device not actually in recovery mode (strap sequence ineffective)
+    - Sohu UART unresponsive or wrong port/baudrate
+    - Update stalled mid-transfer
+  capture:
+    - suite_run_url
+    - pldm_ua line log up to the timeout
+    - configured pldm_update_timeout_s
+    - unit_sn, fw_version, harness_version, station_id, operator_id, timestamp
+  repair_actions:
+    - {step: 1, who: operator, action: "Verify UART cabling and that recovery straps engage; rerun once; preserve logs and route to FW triage", retest: affected_subset, est_time_min: 10}
+  owner: supercomputing-sw
+  doc_url: https://github.com/etched-ai/sw/blob/master/host/system_test/error_codes/doc/SohuSecureBootRecoveryUpdateTestCase.md#TH-FW-0007
+  since: harness 2026.216
+  suspected_components: [SOHU_CHIP, VBB, UART_CABLING]
+  vendor_error_id: []
+  jira_component: ETCH / l10-test
+
+# Secure-boot recovery update codes (PLDM path): the sheet renumbered the
+# recovery-fail row to TH-FW-0008 after 0006 was taken by the DVFS row.
+- error_code: TH-FW-0008
+  name: SECURE_BOOT_RECOVERY_UPDATE_FAIL
+  version: 1
+  category: 5  # CATEGORY_CONFIG — FW subsystem default (spec §3)
+  severity: 2  # ERROR_ISOLATE
+  quick_action: 6  # QA_RETRY
+  component: MLT.FW.SOHU_CHIP  # 1X Module Test (MLT) station, not L10
+  test_cases: [SohuSecureBootRecoveryUpdateTestCase]
+  disposition: FAILED
+  retryable: true
+  max_auto_retry: 1  # rerun once only - further retries can leave the device mid-update
+  description: >
+    The VFIO app firmware update through secure-boot recovery mode failed -
+    the recovery strap sequence failed or the PLDM Update Agent reported an
+    update failure (non-zero pldm_ua exit, update rejected by the device).
+    Tooling/deployment gaps are TH-HAR-0003; invalid args are TH-HAR-0002.
+  probable_causes:
+    - Device did not enter or hold secure-boot recovery mode (strap/VBB issue)
+    - PLDM package rejected by the device (image/signature mismatch)
+    - Sohu UART communication errors during the update
+  capture:
+    - suite_run_url
+    - pldm_ua line log from the per-test log
+    - pldm package path and activation mode
+    - unit_sn, fw_version, harness_version, station_id, operator_id, timestamp
+  repair_actions:
+    - {step: 1, who: operator, action: "Verify UART cabling/seating and rerun recovery-update subset once; then preserve unit + pldm_ua log and verify package vs release; route to FW triage - do NOT keep retrying as device may be mid-update", retest: affected_subset, est_time_min: 10}
+  owner: supercomputing-sw
+  doc_url: https://github.com/etched-ai/sw/blob/master/host/system_test/error_codes/doc/SohuSecureBootRecoveryUpdateTestCase.md#TH-FW-0008
+  since: harness 2026.216
+  suspected_components: [SOHU_CHIP, VBB, UART_CABLING]
+  vendor_error_id: []
+  jira_component: ETCH / l10-test
+# The hot reload never started, so nothing was written. Distinct from
+# TH-FW-0001, which covers an update that was attempted and failed.
+- error_code: TH-FW-0009
+  name: SOHU_HOT_RELOAD_NOT_ELIGIBLE
+  version: 1
+  category: 5  # CATEGORY_CONFIG — suite sequencing, nothing was flashed
+  severity: 5  # ERROR_CONFIG — resolvable by running recovery/bootstrap first
+  quick_action: 9  # QA_ESCALATE — retry cannot change the chip's state
+  component: 1X.FW.SOHU_APP_FIRMWARE
+  test_cases: [SohuHotReloadFirmwareUpdateTestCase]
+  disposition: ERROR  # suite-sequencing problem; excluded from module yield
+  retryable: false
+  max_auto_retry: 0
+  description: >
+    The hot reload could not start, so no firmware was written: the chip is
+    running a legacy bootloader rather than secure_bootloader, it is in
+    bootloader mode with no application PLDM endpoint, or the precheck could not
+    read the running versions over RPC/proxy. The suite must run secure-boot
+    recovery or bootstrap before this test case. Distinct from TH-FW-0001, which
+    covers an update that was attempted and failed.
+  probable_causes:
+    - Suite ran the hot reload before secure_bootloader and an application firmware were in place
+    - An earlier recovery/bootstrap step in the suite failed and was not gated on
+    - PCIe/proxy state left the application PLDM endpoint unreachable
+  capture:
+    - suite_run_url
+    - per-test log naming which eligibility outcome fired and the running image
+    - the MCTP bridge trace if one was spawned
+    - unit_sn, fw_version, harness_version, station_id, operator_id, timestamp
+  repair_actions:
+    - {step: 1, who: escalate, action: "Escalate to Etched with the eligibility outcome and the running image name; nothing was flashed, so do not route the unit to rework or FA.", retest: n/a, ticket_template: ETCH}
+  owner: supercomputing-sw
+  doc_url: https://github.com/etched-ai/sw/blob/master/host/system_test/error_codes/doc/SohuHotReloadFirmwareUpdateTestCase.md#TH-FW-0009
+  since: harness 2026.217
+  suspected_components: []
+  vendor_error_id: []
+  jira_component: ETCH / 1x-module-test
+
+# Harness-level codes emitted by _execute_iteration for failure modes every
+# test case can hit. Sequences 9000-9999 are the reserved catch-all range
+# (spec §3); catch-all volume is a taxonomy-health metric (spec §9).
+- error_code: TH-FW-0018
+  name: SOHU_FIRMWARE_VERSION_MISMATCH
+  version: 1
+  category: 5  # CATEGORY_CONFIG
+  severity: 5  # ERROR_CONFIG
+  quick_action: 9  # QA_ESCALATE
+  component: 1X.FW.SOHU_APP_FIRMWARE
+  test_cases: [CheckFirmwareVersionTestCase]
+  disposition: FAILED
+  retryable: false
+  max_auto_retry: 0
+  description: >
+    The running Sohu firmware is not the image the suite requires: application
+    firmware was expected, but the chip reported only a bootloader slot. The
+    inverse (application firmware running when the step did not expect it) is a
+    suite sequencing problem and stays unclassified.
+  probable_causes:
+    - A preceding firmware-update step did not run or did not complete
+    - The chip reset back into bootloader mode after the update
+    - Suite configuration expects a release the unit was never staged with
+  capture:
+    - suite_run_url
+    - bootloader and application slot identities (image name, release id, digest)
+    - per-test log and transcript
+    - unit_sn, bios/fw_version, harness_version, station_id, operator_id, timestamp
+  repair_actions:
+    - {step: 1, who: operator, action: "Collect the suite/test logs and artifacts for this failure.", est_time_min: 5}
+    - {step: 2, who: escalate, action: "Escalate to Etched engineer with the collected logs.", ticket_template: ETCH}
+  owner: supercomputing-sw
+  doc_url: ""
+  since: harness 2026.226
+  suspected_components: [SOHU_FIRMWARE]
+  vendor_error_id: []
+  jira_component: ETCH / MLT
+- error_code: TH-HAR-0001
+  name: TEST_TIMEOUT
+  version: 1
+  category: 7  # CATEGORY_SOFTWARE — harness-terminated; DUT hang not proven
+  severity: 4  # ERROR_TRIAGE — needs engineering disposition
+  quick_action: 0  # QA_NO_ACT — preserve state; reboot/retry decisions are human
+  component: L10.HAR.HARNESS
+  test_cases: []  # harness-level; applies to any test case
+  disposition: ABORTED  # run stopped before a verdict
+  retryable: false
+  max_auto_retry: 0
+  description: >
+    A test case exceeded its configured timeout and was terminated by the
+    harness before producing a verdict.
+  probable_causes:
+    - DUT hang or severe slowdown under the test workload
+    - Test timeout configured too low for this platform
+    - Harness/executor stall (e.g. remote connection loss)
+  capture:
+    - suite_run_url
+    - per-test log and transcript
+    - configured timeout and measured duration
+    - harness_version, station_id, operator_id, timestamp
+  repair_actions:
+    - {step: 1, who: operator, action: "Rerun the affected subset once to check reproducibility.", retest: affected_subset, est_time_min: 10}
+    - {step: 2, who: escalate, action: "Route to engineering triage with the per-test log and timeout configuration.", retest: n/a, ticket_template: ETCH}
+  owner: supercomputing-sw
+  doc_url: https://github.com/etched-ai/sw/blob/master/host/system_test/error_codes/doc/Harness.md#TH-HAR-0001
+  since: harness 2026.216
+  suspected_components: []
+  vendor_error_id: []
+  jira_component: ETCH / l10-test
+
+# Test invoked with invalid/unsupported arguments: a suite-configuration
+# problem, not a DUT verdict.
+- error_code: TH-HAR-0002
+  name: TEST_ARGS_INVALID
+  version: 1
+  category: 5  # CATEGORY_CONFIG
+  severity: 5  # ERROR_CONFIG — resolvable by fixing the suite configuration
+  quick_action: 9  # QA_ESCALATE — retry cannot fix a config error
+  component: L10.HAR.HARNESS
+  test_cases: [SohuSecureBootRecoveryUpdateTestCase, ServerNestedTestCase, SohuSnapTestCase, VfioProxyVersionTestCase, SohuWeightLoadTestCase, SltModuleNestedTestCase]  # reusable by any test that validates args
+  disposition: ERROR  # suite-config problem; excluded from DUT yield
+  retryable: false
+  max_auto_retry: 0
+  description: >
+    A test case was invoked with invalid or unsupported arguments (e.g.
+    unexpected kwargs, unsupported mode) and rejected the run before
+    touching the DUT.
+  probable_causes:
+    - Suite YAML passes arguments the test does not accept
+    - Suite YAML requests a mode/path the test does not support
+  capture:
+    - suite_run_url
+    - the offending args from the per-test log
+    - harness_version, station_id, timestamp
+  repair_actions:
+    - {step: 1, who: engineer, action: "Fix the suite YAML for this test; do not route the unit to rework"}
+  owner: supercomputing-sw
+  doc_url: https://github.com/etched-ai/sw/blob/master/host/system_test/error_codes/doc/SohuSecureBootRecoveryUpdateTestCase.md#TH-HAR-0002
+  since: harness 2026.216
+  suspected_components: []
+  vendor_error_id: []
+  jira_component: ETCH / l10-test
+
+# A tool, binary, or data file the test depends on is missing on the test
+# system: a deployment/provisioning gap, not a DUT verdict.
+- error_code: TH-HAR-0003
+  name: TEST_DEPENDENCY_UNAVAILABLE
+  version: 1
+  category: 5  # CATEGORY_CONFIG — deployment/provisioning gap
+  severity: 5  # ERROR_CONFIG — resolvable by fixing the deployment
+  quick_action: 9  # QA_ESCALATE — retry cannot materialize a missing file
+  component: L10.HAR.HARNESS
+  test_cases: [SohuSecureBootRecoveryUpdateTestCase, SohuWeightLoadTestCase, VbbFirmwareUpdateTestCase]  # reusable by any test with external dependencies
+  disposition: ERROR  # test-system problem; excluded from DUT yield
+  retryable: false
+  max_auto_retry: 0
+  description: >
+    A tool, binary, or data file the test depends on (e.g. the pldm_ua
+    binary) is missing on the test system, so the test could not perform
+    its function. Distinct from TH-CPU-0003, which covers a tool missing
+    on the DUT. Also covers missing VBB flash runfiles / nm toolchain /
+    version_info artifacts for fixture firmware update and chipsim
+    /mnt/weights 9p mount failure for Kayak workloads that never start.
+  probable_causes:
+    - Test package/runfiles deployment gap on the station
+    - Harness release missing a data dependency
+  capture:
+    - suite_run_url
+    - the missing path from the per-test log
+    - harness_version, station_id, timestamp
+  repair_actions:
+    - {step: 1, who: engineer, action: "Fix the station deployment / harness package; do not route the unit to rework"}
+  owner: supercomputing-sw
+  doc_url: https://github.com/etched-ai/sw/blob/master/host/system_test/error_codes/doc/SohuSecureBootRecoveryUpdateTestCase.md#TH-HAR-0003
+  since: harness 2026.216
+  suspected_components: []
+  vendor_error_id: []
+  jira_component: ETCH / l10-test
+- error_code: TH-HAR-0004
+  name: NESTED_SUITE_ORCHESTRATION_FAILED
+  version: 1
+  category: 5  # CATEGORY_CONFIG
+  severity: 4  # ERROR_TRIAGE
+  quick_action: 9  # QA_ESCALATE
+  component: 1X.HAR.NESTED_SUITE
+  test_cases: [ServerNestedTestCase, SltModuleNestedTestCase]
+  disposition: ERROR  # test-system problem; excluded from module yield
+  retryable: false
+  max_auto_retry: 0
+  description: >
+    A nested suite failed to launch or complete orchestration (container
+    image load, API ready/config, abort/shutdown, missing kv_store inputs,
+    or resource wiring). Child test failures carry their own codes; the
+    wrapper never mints this code for an inner suite that ran and failed.
+    Unpopulated chip slots on SltModuleNestedTestCase remain SKIP (not
+    this code).
+  probable_causes:
+    - Suite configuration or resource wiring error in the nested wrapper
+    - Child suite could not be launched at all
+    - Container runtime / image load or inner harness API failure
+  capture:
+    - suite_run_url
+    - per-test log and transcript
+    - unit_sn, fw_version, harness_version, station_id, operator_id, timestamp
+  repair_actions:
+    - {step: 1, who: operator, action: "Check suite config/resources; wrapper must propagate the first/most-severe child error code - never mint duplicate codes for child failures (test-system ERROR - excluded from yield)"}
+  owner: supercomputing-sw
+  doc_url: https://github.com/etched-ai/sw/blob/master/host/system_test/error_codes/doc/ServerNestedTestCase.md#TH-HAR-0004
+  since: harness 2026.216
+  suspected_components: []
+  vendor_error_id: []
+  jira_component: ETCH / MLT
+- error_code: TH-HAR-9998
+  name: TEST_FAILED_UNCLASSIFIED
+  version: 1
+  category: 0  # CATEGORY_NONE — uncategorized by definition
+  severity: 3  # ERROR_UNKNOWN — catch-all; triage as a taxonomy gap
+  quick_action: 0  # QA_NO_ACT
+  component: L10.HAR.HARNESS
+  test_cases: []  # harness-level; applies to any test case
+  disposition: FAILED  # the test itself signaled a DUT failure
+  retryable: false
+  max_auto_retry: 0
+  description: >
+    Catch-all - a test case failed (raised TestFailedError) without carrying
+    a specific TH error code. Frequent sources should be migrated to
+    dedicated codes (spec §9 taxonomy-health metric).
+  probable_causes:
+    - Test case not yet migrated to specific TH error codes
+  capture:
+    - suite_run_url
+    - per-test log and transcript
+    - harness_version, station_id, operator_id, timestamp
+  repair_actions:
+    - {step: 1, who: operator, action: "Follow the failing test case's own documentation/SOP.", retest: affected_subset, est_time_min: 10}
+    - {step: 2, who: escalate, action: "Open a taxonomy-gap ticket to allocate a specific code for this failure mode.", retest: n/a, ticket_template: ETCH}
+  owner: supercomputing-sw
+  doc_url: https://github.com/etched-ai/sw/blob/master/host/system_test/error_codes/doc/Harness.md#TH-HAR-9998
+  since: harness 2026.216
+  suspected_components: []
+  vendor_error_id: []
+  jira_component: ETCH / l10-test
+- error_code: TH-HAR-9999
+  name: UNHANDLED_EXCEPTION
+  version: 1
+  category: 7  # CATEGORY_SOFTWARE
+  severity: 3  # ERROR_UNKNOWN — catch-all (spec §3, §11.2.2)
+  quick_action: 9  # QA_ESCALATE
+  component: L10.HAR.HARNESS
+  test_cases: []  # harness-level; applies to any test case
+  disposition: ERROR  # test-system problem; excluded from DUT yield
+  retryable: false
+  max_auto_retry: 0
+  description: >
+    Unhandled exception during test execution, wrapped by the harness
+    (spec §11.2.2). The traceback is preserved in the per-test log.
+  probable_causes:
+    - Bug in the test case or harness code
+    - Unexpected environment state the test does not handle
+  capture:
+    - suite_run_url
+    - per-test log with full traceback
+    - harness_version, station_id, operator_id, timestamp
+  repair_actions:
+    - {step: 1, who: operator, action: "Collect the suite/test logs and artifacts for this failure.", est_time_min: 5}
+    - {step: 2, who: escalate, action: "Escalate to Etched engineer with the collected logs and traceback; do NOT route the unit to rework or FA.", ticket_template: ETCH}
+  owner: supercomputing-sw
+  doc_url: https://github.com/etched-ai/sw/blob/master/host/system_test/error_codes/doc/Harness.md#TH-HAR-9999
+  since: harness 2026.216
+  suspected_components: []
+  vendor_error_id: []
+  jira_component: ETCH / l10-test
+
+# TH-HBM-0002 (HBM MISR at-speed loopback) is reserved but NOT
+# allocated: MISR is not implemented in the current module suite.
+- error_code: TH-HBM-0001
+  name: HBM_PMBIST_FAILURE
+  version: 1
+  category: 3  # CATEGORY_MEMORY
+  severity: 2  # ERROR_ISOLATE
+  quick_action: 9  # QA_ESCALATE
+  component: 1X.HBM.STACK
+  test_cases: [SohuPmbistTestCase]
+  disposition: FAILED
+  retryable: false
+  max_auto_retry: 0
+  description: >
+    HBM PMBIST failure.
+  probable_causes:
+    - HBM stack cell or repair-map fault
+    - Marginal HBM interface at speed
+  capture:
+    - suite_run_url
+    - per-test log and transcript
+    - unit_sn, fw_version, harness_version, station_id, operator_id, timestamp
+  repair_actions:
+    - {step: 1, who: operator, action: "Collect the suite/test logs and artifacts for this failure.", est_time_min: 5}
+    - {step: 2, who: escalate, action: "Escalate to Etched engineer with the collected logs.", ticket_template: ETCH}
+  owner: supercomputing-sw
+  doc_url: https://github.com/etched-ai/sw/blob/master/host/system_test/error_codes/doc/SohuPmbistTestCase.md#TH-HBM-0001
+  since: harness 2026.216
+  suspected_components: []
+  vendor_error_id: []
+  jira_component: ETCH / l10-test
+- error_code: TH-HBM-0003
+  name: HBM_EYE_MARGIN_BELOW_THRESHOLD
+  version: 1
+  category: 3  # CATEGORY_MEMORY
+  severity: 4  # ERROR_TRIAGE
+  quick_action: 9  # QA_ESCALATE
+  component: 1X.HBM.STACK
+  test_cases: [SohuRdqsSweepTrainingTestCase]
+  disposition: FAILED
+  retryable: false
+  max_auto_retry: 0
+  description: >
+    HBM training / eye margin below threshold (tentative).
+  probable_causes:
+    - Marginal HBM channel eye
+    - Threshold still under review (tentative)
+  capture:
+    - suite_run_url
+    - per-test log and transcript
+    - unit_sn, fw_version, harness_version, station_id, operator_id, timestamp
+  repair_actions:
+    - {step: 1, who: operator, action: "Collect the suite/test logs and artifacts for this failure.", est_time_min: 5}
+    - {step: 2, who: escalate, action: "Escalate to Etched engineer with the collected logs.", ticket_template: ETCH}
+  owner: supercomputing-sw
+  doc_url: https://github.com/etched-ai/sw/blob/master/host/system_test/error_codes/doc/SohuRdqsSweepTrainingTestCase.md#TH-HBM-0003
+  since: harness 2026.216
+  suspected_components: []
+  vendor_error_id: []
+  jira_component: ETCH / l10-test
+- error_code: TH-HBM-0004
+  name: HBM_MTC_STRESS_FAILURE
+  version: 1
+  category: 3  # CATEGORY_MEMORY
+  severity: 2  # ERROR_ISOLATE
+  quick_action: 6  # QA_RETRY
+  component: 1X.HBM.STACK
+  test_cases: [SohuMtcStressTestCase]
+  disposition: FAILED
+  retryable: true
+  max_auto_retry: 3
+  description: >
+    HBM MTC stress test failure.
+  probable_causes:
+    - HBM stack fault under stress
+    - Marginal pseudo-channel at speed
+  capture:
+    - suite_run_url
+    - per-test log and transcript
+    - unit_sn, fw_version, harness_version, station_id, operator_id, timestamp
+  repair_actions:
+    - {step: 1, who: operator, action: "Suspected test issue, retest once.", retest: affected_subset, est_time_min: 10}
+  owner: supercomputing-sw
+  doc_url: https://github.com/etched-ai/sw/blob/master/host/system_test/error_codes/doc/SohuMtcStressTestCase.md#TH-HBM-0004
+  since: harness 2026.216
+  suspected_components: []
+  vendor_error_id: []
+  jira_component: ETCH / l10-test
+
+# 1X module (SLT) code. Quick action follows the 2026-08-04 error-code review:
+# production rejected automated retry, so QA_ESCALATE with no retry budget.
+#
+# Shared code: the spreadsheet also lists SohuDmaTestCase (active flow), which
+# belongs to another DRI. It is named in test_cases so the entry is complete;
+# this PR wires only SohuHbmBandwidthTestCase.
+- error_code: TH-HBM-0005
+  name: HBM_BANDWIDTH_BELOW_THRESHOLD
+  version: 1
+  category: 3  # CATEGORY_MEMORY
+  severity: 2  # ERROR_ISOLATE — module cannot be trusted for workload
+  quick_action: 9  # QA_ESCALATE — no auto-retry per 2026-08-04 review
+  component: 1X.HBM.STACK
+  test_cases: [SohuHbmBandwidthTestCase, SohuDmaTestCase]
+  disposition: FAILED
+  retryable: false
+  max_auto_retry: 0
+  description: >
+    PCIe-to-HBM read or write throughput on the side under test did not reach
+    the configured min_bandwidth_gb_s floor. Emitted only from that threshold
+    comparison; the measured value and the configured threshold are in the
+    failure message and recorded as measurements.
+  probable_causes:
+    - HBM channel running below rate after training
+    - Degraded or repaired HBM lanes reducing effective width
+    - Sohu HBM controller or DMA engine underperforming
+  capture:
+    - suite_run_url
+    - measured bandwidth vs configured min_bandwidth_gb_s, and the side tested
+    - the hbm_<side>_write_bandwidth and hbm_<side>_read_bandwidth measurements
+    - unit_sn, fw_version, harness_version, station_id, operator_id, timestamp
+  repair_actions:
+    - {step: 1, who: operator, action: "Collect the suite/test logs and artifacts for this failure.", est_time_min: 5}
+    - {step: 2, who: escalate, action: "Escalate to Etched engineer with the collected logs.", ticket_template: ETCH}
+  owner: supercomputing-sw
+  doc_url: https://github.com/etched-ai/sw/blob/master/host/system_test/error_codes/doc/SohuHbmBandwidthTestCase.md#TH-HBM-0005
+  since: harness 2026.216
+  suspected_components: [HBM_STACK, ASIC]
+  vendor_error_id: []
+  jira_component: ETCH / MLT
+
+# 1X module (SLT) code.
+#
+# No retry: defects exceed lane-repair coverage, so a rerun cannot find a
+# repair that does not exist. The stack is unrepairable and the decision is a
+# human screen-out. Incomplete / aborted sweeps (repairability unknown) are
+# TH-HBM-0008 (ERROR), not this code.
+- error_code: TH-HBM-0006
+  name: HBM_LANE_REPAIR_FAILED
+  version: 1
+  category: 3  # CATEGORY_MEMORY
+  severity: 2  # ERROR_ISOLATE — module cannot be trusted for workload
+  quick_action: 9  # QA_ESCALATE
+  component: 1X.HBM.STACK
+  test_cases: [SohuLaneRepairTestCase]
+  disposition: FAILED
+  retryable: false
+  max_auto_retry: 0
+  description: >
+    Lane repair established that one or more HBM pseudo-channels cannot be
+    repaired within spare coverage. Covers a completed sweep with per-target
+    errors (fail_fast=False), and fail_fast raises that prove unrepairability
+    (exhausted candidate byte pairs, multi-bit / aword / DWORD LFSR
+    unrepairable, or applied repairs still failing verification). Distinct
+    from TH-HBM-0008, which covers an aborted sweep where repairability was
+    never established (RPC / firmware / setup).
+  probable_causes:
+    - More failing lanes on the pseudo-channel than there are spares
+    - HBM stack or interposer defect beyond lane-repair coverage
+    - Sohu HBM PHY fault on the affected channel
+  capture:
+    - suite_run_url
+    - hbm_lane_repairs JSON artifact (per-target repair map)
+    - Lane Failures measurement (HBM/channel/pseudo-channel of each failure)
+    - unit_sn, fw_version, harness_version, station_id, operator_id, timestamp
+  repair_actions:
+    - {step: 1, who: operator, action: "Collect the suite/test logs and artifacts for this failure.", est_time_min: 5}
+    - {step: 2, who: escalate, action: "Escalate to Etched engineer with the collected logs.", ticket_template: ETCH}
+  owner: supercomputing-sw
+  doc_url: https://github.com/etched-ai/sw/blob/master/host/system_test/error_codes/doc/SohuLaneRepairTestCase.md#TH-HBM-0006
+  since: harness 2026.216
+  suspected_components: [HBM_STACK, INTERPOSER, ASIC]
+  vendor_error_id: []
+  jira_component: ETCH / MLT
+- error_code: TH-HBM-0007
+  name: HBM_DEVICE_ID_READ_FAIL
+  version: 1
+  category: 11  # CATEGORY_DATA
+  severity: 2  # ERROR_ISOLATE
+  quick_action: 9  # QA_ESCALATE
+  component: 1X.HBM.STACK
+  test_cases: [SohuHbmDeviceIdTestCase]
+  disposition: FAILED
+  retryable: false
+  max_auto_retry: 0
+  description: >
+    The IEEE 1500 DRAM device ID could not be read from every HBM stack, or the
+    reported stack topology did not match the expected stack count. Covers an
+    unreadable device ID (RPC error, timeout, or unexpected response) as well as
+    a missing channel id or wrong number of stacks in the reported system info.
+  probable_causes:
+    - HBM stack not responding on its IEEE 1500 port
+    - Stack absent, misassembled, or not trained during bring-up
+    - Sohu HBM controller fault on the affected stack
+  capture:
+    - suite_run_url
+    - per-test log naming the failing stack and the underlying error
+    - reported HBM system info (stack count and channel ids)
+    - recorded per-stack serial_number / manufacturer / density measurements
+    - unit_sn, fw_version, harness_version, station_id, operator_id, timestamp
+  repair_actions:
+    - {step: 1, who: operator, action: "Collect the suite/test logs and artifacts for this failure.", est_time_min: 5}
+    - {step: 2, who: escalate, action: "Escalate to Etched engineer with the collected logs.", ticket_template: ETCH}
+  owner: supercomputing-sw
+  doc_url: https://github.com/etched-ai/sw/blob/master/host/system_test/error_codes/doc/SohuHbmDeviceIdTestCase.md#TH-HBM-0007
+  since: harness 2026.216
+  suspected_components: [HBM_STACK, ASIC]
+  vendor_error_id: []
+  jira_component: ETCH / MLT
+
+# The sweep aborted, so repairability was never established. Distinct from
+# TH-HBM-0006, which asserts the stack is unrepairable within spare coverage.
+- error_code: TH-HBM-0008
+  name: HBM_LANE_REPAIR_INCOMPLETE
+  version: 1
+  category: 3  # CATEGORY_MEMORY — HBM subsystem, but no verdict was reached
+  severity: 4  # ERROR_TRIAGE — repairability unknown, needs a human look
+  quick_action: 9  # QA_ESCALATE — no auto-retry per 2026-08-04 review
+  component: 1X.HBM.STACK
+  test_cases: [SohuLaneRepairTestCase]
+  disposition: ERROR  # repairability never established; excluded from module yield
+  retryable: false
+  max_auto_retry: 0
+  description: >
+    The lane-repair detection sweep did not run to completion, so whether a
+    passing repair exists was never established. Covers unexpected detection
+    abort (RPC / TypeError / firmware reload after clearing persisted repairs)
+    before an unrepairable verdict. Distinct from TH-HBM-0006, which covers
+    proven unrepairability (exhausted candidates, multi-bit / aword / DWORD
+    LFSR unrepairable, or repairs that still fail verification).
+  probable_causes:
+    - Detection RPC or SPI-flash access failed partway through the sweep
+    - Firmware reload after clearing persisted repairs did not come back
+    - Repair-map merge hit a conflicting or out-of-range persisted entry
+  capture:
+    - suite_run_url
+    - per-test log with the detection exception and the phase it aborted in
+    - the partial hbm_lane_repairs artifact if one was written
+    - unit_sn, fw_version, harness_version, station_id, operator_id, timestamp
+  repair_actions:
+    - {step: 1, who: escalate, action: "Escalate to Etched with the detection exception and the partial repair map; repairability is unknown rather than failed, so do not route the unit to FA.", retest: n/a, ticket_template: ETCH}
+  owner: supercomputing-sw
+  doc_url: https://github.com/etched-ai/sw/blob/master/host/system_test/error_codes/doc/SohuLaneRepairTestCase.md#TH-HBM-0008
+  since: harness 2026.217
+  suspected_components: []
+  vendor_error_id: []
+  jira_component: ETCH / MLT
+- error_code: TH-MEZZ-0001
+  name: MEZZANINE_CPLD_ACCESS_WRITE_FAILED
+  version: 1
+  category: 6  # CATEGORY_HARDWARE
+  severity: 2  # ERROR_ISOLATE
+  quick_action: 6  # QA_RETRY
+  component: 1X.MEZZ.CPLD
+  test_cases: [ProgramSecureBootloaderTestCase, BootloaderResultTestCase]
+  disposition: FAILED
+  retryable: true
+  max_auto_retry: 1
+  description: Mezz/eval CPLD register access or write failure.
+  probable_causes:
+    - Mezzanine or eval-board CPLD register access failed
+    - Devkit cannot communicate with the Sohu module, it is likely that the bootloader is not running because the PV1 is not powering on
+  capture:
+    - suite_run_url
+    - per-test log and transcript
+    - CPLD operation transcript
+    - harness_version, station_id, operator_id, timestamp
+  repair_actions:
+    - {step: 1, who: operator, action: "Verify that the green power indicators on the Sohu module are ON.", est_time_min: 5}
+    - {step: 2, who: operator, action: "Verify that both the PCIe cable and power cable are connected correctly and securely.", est_time_min: 5}
+    - {step: 3, who: operator, action: "If there is no trouble found, retest once.", retest: affected_subset, est_time_min: 10}
+  owner: supercomputing-sw
+  doc_url: https://github.com/etched-ai/sw/blob/master/host/system_test/error_codes/doc/ProgramSecureBootloaderTestCase.md#TH-MEZZ-0001
+  since: harness 2026.217
+  suspected_components: [MEZZ]
+  vendor_error_id: []
+  jira_component: ETCH / l10-test  # known bugs: ETCH-35586
+- error_code: TH-MEZZ-0002
+  name: UNEXPECTED_MEZZANINE_I2C_ALERT
+  version: 1
+  category: 6  # CATEGORY_HARDWARE
+  severity: 2  # ERROR_ISOLATE
+  quick_action: 6  # QA_RETRY
+  component: 1X.MEZZ.I2C
+  test_cases: [MezzanineI2cAlertsTestCase]
+  disposition: FAILED
+  retryable: true
+  max_auto_retry: 1
+  description: Unexpected mezzanine I2C alert asserted.
+  probable_causes:
+    - Unexpected mezzanine I2C alert state
+  capture:
+    - suite_run_url
+    - per-test log and transcript
+    - mezzanine telemetry
+    - harness_version, station_id, operator_id, timestamp
+  repair_actions:
+    - {step: 1, who: operator, action: "Suspected test issue, retest once.", retest: affected_subset, est_time_min: 10}
+  owner: supercomputing-sw
+  doc_url: https://github.com/etched-ai/sw/blob/master/host/system_test/error_codes/doc/MezzanineI2cAlertsTestCase.md#TH-MEZZ-0002
+  since: harness 2026.217
+  suspected_components: [MEZZ]
+  vendor_error_id: []
+  jira_component: ETCH / l10-test
+# L10 cable inventory (CheckCable). The check records every bad port under
+# exactly one of these codes, in the order they are listed here, and reports the
+# earliest one when a run trips several. A precondition failure that stops the
+# check before any cable is reached (no SSH target, no cables in the BOM, netd
+# unreachable) reports TH-HAR-0003 instead: nothing NIC-specific was checked.
+# Numbered from 0036: the L10 station registry reserves TH-NIC-0001..0035.
+- error_code: TH-NIC-0036
+  name: NIC_PORT_INTERFACE_MISSING
+  version: 1
+  category: 1  # CATEGORY_NETWORK
+  severity: 4  # ERROR_TRIAGE
+  quick_action: 9  # QA_ESCALATE -- retry cannot bind a driver
+  component: L10.NIC.PORT
+  test_cases: [CheckCable]
+  disposition: FAILED
+  retryable: false
+  max_auto_retry: 0
+  description: >
+    netd reported a NIC port with no kernel interface name, so ethtool cannot
+    read that port's module EEPROM and the cable there cannot be verified.
+  probable_causes:
+    - NIC function present on the bus but no netdev created (driver not bound)
+    - NIC firmware or driver failed to bring the port up
+    - Port renamed or removed on the host outside the harness
+  capture:
+    - suite_run_url
+    - netd GetNics response for the affected port (bdf, position)
+    - ip link and lspci output for the NIC
+    - unit_sn, bios/fw_version, harness_version, station_id, operator_id, timestamp
+  repair_actions:
+    - {step: 1, who: operator, action: "Collect the suite/test logs and artifacts for this failure.", est_time_min: 5}
+    - {step: 2, who: escalate, action: "Escalate to Etched engineer with the collected logs.", ticket_template: ETCH}
+  owner: supercomputing-sw
+  doc_url: https://docs.google.com/document/d/1-_YC_cXvi3FtKd51jIetY9pER8JtCxH5dBE9UvndZWU/edit
+  since: harness 2026.224
+  suspected_components: [NIC, NIC_DRIVER]
+  vendor_error_id: []
+  jira_component: ETCH / l10-test
+
+# Both halves of this group leave the check without the data it needs to judge a
+# module, so they share one code: an unusable position identifier from netd, and
+# an EEPROM that omits a required identity field.
+- error_code: TH-NIC-0037
+  name: CABLE_MODULE_INFO_INCOMPLETE
+  version: 1
+  category: 11  # CATEGORY_DATA
+  severity: 4  # ERROR_TRIAGE
+  quick_action: 9  # QA_ESCALATE
+  component: L10.NIC.CABLE
+  test_cases: [CheckCable]
+  disposition: FAILED
+  retryable: false
+  max_auto_retry: 0
+  description: >
+    A pluggable module was read but cannot be checked: netd gave its port no
+    position identifier or one outside the known layout, or the module did not
+    report every identity field the check requires.
+  probable_causes:
+    - Corrupt or non-compliant module EEPROM omitting Vendor PN/SN or Identifier
+    - Module type whose EEPROM layout ethtool cannot fully decode
+    - netd port-position mapping missing or stale for this server layout
+  capture:
+    - suite_run_url
+    - full ethtool --module-info output for the affected interface
+    - netd GetNics response for the affected port (bdf, position)
+    - unit_sn, bios/fw_version, harness_version, station_id, operator_id, timestamp
+  repair_actions:
+    - {step: 1, who: operator, action: "Collect the suite/test logs and artifacts for this failure.", est_time_min: 5}
+    - {step: 2, who: escalate, action: "Escalate to Etched engineer with the collected logs.", ticket_template: ETCH}
+  owner: supercomputing-sw
+  doc_url: https://docs.google.com/document/d/1-_YC_cXvi3FtKd51jIetY9pER8JtCxH5dBE9UvndZWU/edit
+  since: harness 2026.224
+  suspected_components: [CABLE, NIC]
+  vendor_error_id: []
+  jira_component: ETCH / l10-test
+- error_code: TH-NIC-0038
+  name: CABLE_MISSING_AT_POSITION
+  version: 1
+  category: 1  # CATEGORY_NETWORK
+  severity: 2  # ERROR_ISOLATE
+  quick_action: 9  # QA_ESCALATE -- an absent cable needs a human, not a retry
+  component: L10.NIC.CABLE
+  test_cases: [CheckCable]
+  disposition: FAILED
+  retryable: false
+  max_auto_retry: 0
+  description: >
+    The BOM declares a cable at a port position where none was found: no NIC
+    reported that position, the port was pruned earlier, or the module read
+    failed.
+  probable_causes:
+    - Cable not installed, or installed in the wrong cage
+    - Cable or module not fully seated, so the cage reads as empty
+    - Failed module EEPROM read on an otherwise populated cage
+    - BOM declares a position the server build does not populate
+  capture:
+    - suite_run_url
+    - the check's per-position summary naming the cause for this position
+    - ethtool --module-info output or error for the affected interface
+    - unit_sn, bios/fw_version, harness_version, station_id, operator_id, timestamp
+  repair_actions:
+    - {step: 1, who: operator, action: "Verify the cable is installed and fully seated at the reported port position per the cabling SOP, then retest.", retest: affected_subset, est_time_min: 10}
+    - {step: 2, who: operator, action: "Collect the suite/test logs and artifacts for this failure.", est_time_min: 5}
+    - {step: 3, who: escalate, action: "Escalate to Etched engineer with the collected logs.", ticket_template: ETCH}
+  owner: supercomputing-sw
+  doc_url: https://docs.google.com/document/d/1-_YC_cXvi3FtKd51jIetY9pER8JtCxH5dBE9UvndZWU/edit
+  since: harness 2026.224
+  suspected_components: [CABLE, NIC]
+  vendor_error_id: []
+  jira_component: ETCH / l10-test
+
+# Two ports cannot occupy one physical position, so this is a station/config
+# fault rather than a server verdict: disposition ERROR keeps it out of yield.
+- error_code: TH-NIC-0039
+  name: NIC_PORT_POSITION_AMBIGUOUS
+  version: 1
+  category: 5  # CATEGORY_CONFIG
+  severity: 4  # ERROR_TRIAGE
+  quick_action: 9  # QA_ESCALATE
+  component: L10.NIC.PORT
+  test_cases: [CheckCable]
+  disposition: ERROR  # test-system problem; excluded from server yield
+  retryable: false
+  max_auto_retry: 0
+  description: >
+    More than one module reported the same port position, so the check cannot
+    tell which one is physically there and prunes all of them rather than
+    guessing.
+  probable_causes:
+    - netd port-position mapping assigns one position to several BDFs
+    - Server layout changed without a matching netd configuration update
+    - netd reported the same port twice in one GetNics response
+  capture:
+    - suite_run_url
+    - full netd GetNics response (all bdf/position pairs)
+    - the netd port-position configuration in use on the host
+    - station_id, harness_version, operator_id, timestamp
+  repair_actions:
+    - {step: 1, who: operator, action: "Collect the suite/test logs and artifacts for this failure.", est_time_min: 5}
+    - {step: 2, who: escalate, action: "Escalate to Etched engineer with the collected logs.", ticket_template: ETCH}
+  owner: supercomputing-sw
+  doc_url: https://docs.google.com/document/d/1-_YC_cXvi3FtKd51jIetY9pER8JtCxH5dBE9UvndZWU/edit
+  since: harness 2026.224
+  suspected_components: []
+  vendor_error_id: []
+  jira_component: ETCH / l10-test
+- error_code: TH-NIC-0040
+  name: CABLE_IDENTITY_MISMATCH
+  version: 1
+  category: 6  # CATEGORY_HARDWARE
+  severity: 2  # ERROR_ISOLATE
+  quick_action: 9  # QA_ESCALATE -- the wrong part must be swapped
+  component: L10.NIC.CABLE
+  test_cases: [CheckCable]
+  disposition: FAILED
+  retryable: false
+  max_auto_retry: 0
+  description: >
+    A module's identity fields do not match the BOM entry for its port
+    position: Vendor PN (including the entry's alternate part numbers), Vendor
+    name, Identifier, Transmitter technology, or a shopfloor-declared Vendor SN.
+  probable_causes:
+    - Wrong cable part or length installed at this position
+    - Cables swapped between positions during assembly
+    - Substitute part not yet listed in the BOM entry's alternate_part_numbers
+    - Serial number on the installed cable differs from the shopfloor record
+  capture:
+    - suite_run_url
+    - the check's per-field expected vs. observed values for this position
+    - full ethtool --module-info output for the affected interface
+    - the BOM cable entry for this position
+    - unit_sn, bios/fw_version, harness_version, station_id, operator_id, timestamp
+  repair_actions:
+    - {step: 1, who: operator, action: "Compare the installed cable against the BOM part for this position and install the correct part, then retest.", retest: affected_subset, est_time_min: 15}
+    - {step: 2, who: operator, action: "Collect the suite/test logs and artifacts for this failure.", est_time_min: 5}
+    - {step: 3, who: escalate, action: "Escalate to Etched engineer with the collected logs.", ticket_template: ETCH}
+  owner: supercomputing-sw
+  doc_url: https://docs.google.com/document/d/1-_YC_cXvi3FtKd51jIetY9pER8JtCxH5dBE9UvndZWU/edit
+  since: harness 2026.224
+  suspected_components: [CABLE]
+  vendor_error_id: []
+  jira_component: ETCH / l10-test
+- error_code: TH-NIC-0041
+  name: CABLE_UNEXPECTED_AT_POSITION
+  version: 1
+  category: 6  # CATEGORY_HARDWARE
+  severity: 2  # ERROR_ISOLATE
+  quick_action: 9  # QA_ESCALATE
+  component: L10.NIC.CABLE
+  test_cases: [CheckCable]
+  disposition: FAILED
+  retryable: false
+  max_auto_retry: 0
+  description: >
+    A module was found at a port position where the BOM declares no cable.
+  probable_causes:
+    - Cable installed in a position the build does not use
+    - Cable intended for another position plugged here
+    - BOM missing an entry for a position this build populates
+  capture:
+    - suite_run_url
+    - the position and interface of the unexpected module
+    - full ethtool --module-info output for the affected interface
+    - the BOM cable entries for this server
+    - unit_sn, bios/fw_version, harness_version, station_id, operator_id, timestamp
+  repair_actions:
+    - {step: 1, who: operator, action: "Remove or relocate the cable at the reported position per the cabling SOP, then retest.", retest: affected_subset, est_time_min: 10}
+    - {step: 2, who: operator, action: "Collect the suite/test logs and artifacts for this failure.", est_time_min: 5}
+    - {step: 3, who: escalate, action: "Escalate to Etched engineer with the collected logs.", ticket_template: ETCH}
+  owner: supercomputing-sw
+  doc_url: https://docs.google.com/document/d/1-_YC_cXvi3FtKd51jIetY9pER8JtCxH5dBE9UvndZWU/edit
+  since: harness 2026.224
+  suspected_components: [CABLE]
+- error_code: TH-MEZZ-0003
+  name: EXPECTED_MEZZANINE_I2C_ALERT_NOT_OBSERVED
+  version: 1
+  category: 6
+  severity: 2
+  quick_action: 6
+  component: 1X.MEZZ.I2C
+  test_cases: [MezzanineI2cAlertsTestCase]
+  disposition: FAILED
+  retryable: true
+  max_auto_retry: 1
+  description: Expected mezzanine I2C alert was not observed.
+  probable_causes:
+    - Expected mezzanine I2C alert state was not reported
+  capture:
+    - suite_run_url
+    - per-test log and transcript
+    - mezzanine telemetry
+    - harness_version, station_id, operator_id, timestamp
+  repair_actions:
+    - {step: 1, who: operator, action: "Suspected test issue, retest once.", retest: affected_subset, est_time_min: 10}
+  owner: supercomputing-sw
+  doc_url: ""
+  since: harness 2026.219
+  suspected_components: [MEZZ]
+  vendor_error_id: []
+  jira_component: ETCH / l10-test
+- error_code: TH-PCIE-0001
+  name: PCIE_LINK_STATE_MISMATCH
+  version: 1
+  category: 6  # CATEGORY_HARDWARE
+  severity: 2  # ERROR_ISOLATE
+  quick_action: 6  # QA_RETRY
+  component: 1X.PCIE.LINK
+  test_cases: [SohuPcieAerCheckTestCase]
+  disposition: FAILED
+  retryable: true
+  max_auto_retry: 3
+  description: >
+    PCIe link state mismatch: the Sohu endpoint link is not L0 / Gen5 / x16.
+  probable_causes:
+    - PCIe link degraded or retrained at a lower speed/width
+    - Marginal PCIe channel or connector seating
+  capture:
+    - suite_run_url
+    - per-test log and transcript
+    - unit_sn, fw_version, harness_version, station_id, operator_id, timestamp
+  repair_actions:
+    - {step: 1, who: operator, action: "Suspect PCIe cable not fully seated into PV1 board, reseat the cable and retest once.", retest: affected_subset, est_time_min: 10}
+  owner: supercomputing-sw
+  doc_url: https://github.com/etched-ai/sw/blob/master/host/system_test/error_codes/doc/SohuPcieAerCheckTestCase.md#TH-PCIE-0001
+  since: harness 2026.216
+  suspected_components: []
+  vendor_error_id: []
+  jira_component: ETCH / l10-test
+- error_code: TH-PCIE-0002
+  name: PCIE_AER_ERRORS_DETECTED
+  version: 1
+  category: 6  # CATEGORY_HARDWARE
+  severity: 2  # ERROR_ISOLATE
+  quick_action: 6  # QA_RETRY
+  component: 1X.PCIE.LINK
+  test_cases: [SohuPcieAerCheckTestCase]
+  disposition: FAILED
+  retryable: true
+  max_auto_retry: 3
+  description: >
+    PCIe AER errors detected (correctable or uncorrectable).
+  probable_causes:
+    - Marginal PCIe channel producing correctable errors
+    - Connector contamination or seating
+  capture:
+    - suite_run_url
+    - per-test log and transcript
+    - unit_sn, fw_version, harness_version, station_id, operator_id, timestamp
+  repair_actions:
+    - {step: 1, who: operator, action: "Suspect PCIe cable not fully seated into PV1 board, reseat the cable and retest once.", retest: affected_subset, est_time_min: 10}
+  owner: supercomputing-sw
+  doc_url: https://github.com/etched-ai/sw/blob/master/host/system_test/error_codes/doc/SohuPcieAerCheckTestCase.md#TH-PCIE-0002
+  since: harness 2026.216
+  suspected_components: []
+  vendor_error_id: []
+  jira_component: ETCH / l10-test
+- error_code: TH-PCIE-0003
+  name: PCIE_CSRAM_DMA_THROUGHPUT_BELOW_THRESHOLD
+  version: 1
+  category: 6  # CATEGORY_HARDWARE
+  severity: 2  # ERROR_ISOLATE
+  quick_action: 9  # QA_ESCALATE
+  component: 1X.PCIE.CSRAM_DMA
+  test_cases: [SohuPcieCsramThroughputTestCase, SohuDmaTestCase]
+  disposition: FAILED
+  retryable: false
+  max_auto_retry: 0
+  description: >
+    PCIe->CSRAM DMA throughput below the qualified floor (suite-configured;
+    50 GB/s for the 1X module suite). Emitted by the dedicated throughput
+    test and by SohuDmaTestCase when its CentralSram throughput check fails
+    in the active DMA flow.
+  probable_causes:
+    - PCIe link degraded (lane width / speed below Gen5 x16)
+    - Marginal PCIe channel forcing correctable-error retries
+    - DMA engine or arbitration issue limiting transfer rate
+  capture:
+    - suite_run_url
+    - measured read/write throughput vs configured floor
+    - lspci link state and AER counters
+    - unit_sn, fw_version, harness_version, station_id, operator_id, timestamp
+  repair_actions:
+    - {step: 1, who: operator, action: "Collect the suite/test logs and artifacts for this failure.", est_time_min: 5}
+    - {step: 2, who: escalate, action: "Escalate to Etched engineer with the collected logs.", ticket_template: ETCH}
+  owner: supercomputing-sw
+  doc_url: https://github.com/etched-ai/sw/blob/master/host/system_test/error_codes/doc/SohuPcieCsramThroughputTestCase.md#TH-PCIE-0003
+  since: harness 2026.216
+  suspected_components: [SOHU_ASIC, PCIE_LINK]
+  vendor_error_id: []
+  jira_component: ETCH / l10-test
+- error_code: TH-PCIE-0004
+  name: PCIE_HBM_DMA_INTEGRITY_MISMATCH
+  version: 1
+  category: 11  # CATEGORY_DATA
+  severity: 2  # ERROR_ISOLATE
+  quick_action: 9  # QA_ESCALATE
+  component: 1X.PCIE.HBM_DMA
+  test_cases: [SohuDmaTestCase]
+  disposition: FAILED
+  retryable: false
+  max_auto_retry: 0
+  description: >
+    PCIe->HBM DMA data integrity mismatch: dma_test_app read back data from
+    an HBM region (WeightMemory / KvCacheMemory) that does not match the
+    written random / bit-inverse pattern.
+  probable_causes:
+    - HBM stack or pseudo-channel data fault
+    - Marginal PCIe or on-chip path corrupting transfers to HBM
+    - DMA addressing fault targeting the wrong block/offset
+  capture:
+    - suite_run_url
+    - full dma_test_app stdout/stderr, exit code, and RNG seed
+    - failing region/blocks/offset from the verification context
+    - unit_sn, fw_version, harness_version, station_id, operator_id, timestamp
+  repair_actions:
+    - {step: 1, who: operator, action: "Collect the suite/test logs and artifacts for this failure.", est_time_min: 5}
+    - {step: 2, who: escalate, action: "Escalate to Etched engineer with the collected logs.", ticket_template: ETCH}
+  owner: supercomputing-sw
+  doc_url: https://github.com/etched-ai/sw/blob/master/host/system_test/error_codes/doc/SohuDmaTestCase.md#TH-PCIE-0004
+  since: harness 2026.216
+  suspected_components: [SOHU_ASIC, HBM_STACK]
+  vendor_error_id: []
+  jira_component: ETCH / l10-test
+
+# SohuDmaTestCase cannot tell a PCIe-path limit from an HBM-side bandwidth
+# limit, so its HBM throughput-floor failures emit this code, not TH-HBM-0005.
+- error_code: TH-PCIE-0005
+  name: PCIE_HBM_DMA_THROUGHPUT_BELOW_THRESHOLD
+  version: 1
+  category: 6  # CATEGORY_HARDWARE
+  severity: 2  # ERROR_ISOLATE
+  quick_action: 9  # QA_ESCALATE
+  component: 1X.PCIE.HBM_DMA
+  test_cases: [SohuDmaTestCase]
+  disposition: FAILED
+  retryable: false
+  max_auto_retry: 0
+  description: >
+    PCIe->HBM DMA throughput below the qualified floor (suite-configured;
+    16 GB/s for the 1X module suite) on WeightMemory / KvCacheMemory
+    transfers in dma_test_app.
+  probable_causes:
+    - PCIe link degraded (lane width / speed below Gen5 x16)
+    - HBM stack or controller limiting sustained bandwidth
+    - DMA engine or arbitration issue limiting transfer rate
+  capture:
+    - suite_run_url
+    - measured per-region throughput vs configured floor
+    - full dma_test_app stdout/stderr, exit code, and RNG seed
+    - unit_sn, fw_version, harness_version, station_id, operator_id, timestamp
+  repair_actions:
+    - {step: 1, who: operator, action: "Collect the suite/test logs and artifacts for this failure.", est_time_min: 5}
+    - {step: 2, who: escalate, action: "Escalate to Etched engineer with the collected logs.", ticket_template: ETCH}
+  owner: supercomputing-sw
+  doc_url: https://github.com/etched-ai/sw/blob/master/host/system_test/error_codes/doc/SohuDmaTestCase.md#TH-PCIE-0005
+  since: harness 2026.216
+  suspected_components: [SOHU_ASIC, PCIE_LINK, HBM_STACK]
+  vendor_error_id: []
+  jira_component: ETCH / l10-test
+- error_code: TH-PCIE-0006
+  name: PCIE_SPEED_CHANGE_FAILED
+  version: 1
+  category: 6  # CATEGORY_HARDWARE
+  severity: 2  # ERROR_ISOLATE
+  quick_action: 6  # QA_RETRY
+  component: 1X.PCIE.LINK
+  test_cases: []
+  disposition: FAILED
+  retryable: true
+  max_auto_retry: 3
+  description: >
+    PCIe speed change failed (Gen5<->Gen1 transition did not complete).
+  probable_causes:
+    - Link training failure at the target rate
+    - Marginal PCIe channel at Gen5
+  capture:
+    - suite_run_url
+    - per-test log and transcript
+    - unit_sn, fw_version, harness_version, station_id, operator_id, timestamp
+  repair_actions:
+    - {step: 1, who: operator, action: "Suspect PCIe cable not fully seated into PV1 board, reseat the cable and retest once.", retest: affected_subset, est_time_min: 10}
+  owner: supercomputing-sw
+  doc_url: https://github.com/etched-ai/sw/blob/master/host/system_test/error_codes/doc/SohuPcieRateChangeTestCase.md#TH-PCIE-0006
+  since: harness 2026.216
+  suspected_components: []
+  vendor_error_id: []
+  jira_component: ETCH / l10-test
+- error_code: TH-PCIE-0007
+  name: PCIE_LANE_MARGIN_BELOW_THRESHOLD
+  version: 1
+  category: 6  # CATEGORY_HARDWARE
+  severity: 4  # ERROR_TRIAGE
+  quick_action: 6  # QA_RETRY
+  component: 1X.PCIE.LINK
+  test_cases: [SohuPcieLaneMarginTestCase]
+  disposition: FAILED
+  retryable: true
+  max_auto_retry: 3
+  description: >
+    PCIe lane margin below threshold (EH>25mV EW>0.2UI, tentative).
+  probable_causes:
+    - Marginal PCIe channel on one or more lanes
+    - Threshold still under review (tentative)
+  capture:
+    - suite_run_url
+    - per-test log and transcript
+    - unit_sn, fw_version, harness_version, station_id, operator_id, timestamp
+  repair_actions:
+    - {step: 1, who: operator, action: "Suspect PCIe cable not fully seated into PV1 board, reseat the cable and retest once.", retest: affected_subset, est_time_min: 10}
+  owner: supercomputing-sw
+  doc_url: https://github.com/etched-ai/sw/blob/master/host/system_test/error_codes/doc/SohuPcieLaneMarginTestCase.md#TH-PCIE-0007
+  since: harness 2026.216
+  suspected_components: []
+  vendor_error_id: []
+  jira_component: ETCH / l10-test
+- error_code: TH-PCIE-0008
+  name: SOHU_ENDPOINT_NOT_ENUMERATED
+  version: 1
+  category: 6  # CATEGORY_HARDWARE
+  severity: 2  # ERROR_ISOLATE
+  quick_action: 6  # QA_RETRY
+  component: 1X.PCIE.ENUMERATION
+  test_cases: [PcieSetupTestCase, SohuVfioPingTestCase, SohuSaScreeningTestCase]
+  disposition: FAILED
+  retryable: true
+  max_auto_retry: 3
+  description: Sohu endpoint not enumerated (absent from PCIe tree / RPC proxy).
+  probable_causes:
+    - Sohu endpoint is absent from the PCIe tree or RPC proxy
+  capture:
+    - suite_run_url
+    - per-test log and transcript
+    - PCIe topology and RPC proxy state
+    - harness_version, station_id, operator_id, timestamp
+  repair_actions:
+    - {step: 1, who: operator, action: "Suspect PCIe cable not fully seated into PV1 board, reseat the cable and retest once.", retest: affected_subset, est_time_min: 10}
+  owner: supercomputing-sw
+  doc_url: https://github.com/etched-ai/sw/blob/master/host/system_test/error_codes/doc/PcieSetupTestCase.md#TH-PCIE-0008
+  since: harness 2026.217
+  suspected_components: [PCIE]
+  vendor_error_id: []
+  jira_component: ETCH / l10-test  # known bugs: ETCH-35872
+- error_code: TH-PWR-0001
+  name: STATION_PSU_LOAD_IMBALANCE
+  version: 1
+  category: 6  # CATEGORY_HARDWARE
+  severity: 4  # ERROR_TRIAGE
+  quick_action: 2  # QA_WARM_REBOOT — targets the fixture, not the DUT (spec §6)
+  component: 1X.PWR.STATION_PSU
+  test_cases: [CheckPsuHealth]
+  disposition: ERROR  # test-system problem; excluded from module yield
+  retryable: false
+  max_auto_retry: 0
+  description: >
+    Station PSU load imbalance above 5% or PGOOD failure (fixture problem;
+    excluded from module yield).
+  probable_causes:
+    - Dev-kit chassis PSU degradation or imbalance
+    - Station power cabling problem
+  capture:
+    - suite_run_url
+    - per-test log and transcript
+    - unit_sn, fw_version, harness_version, station_id, operator_id, timestamp
+  repair_actions:
+    - {step: 1, who: operator, action: "Known Devkit intermittent issue, retest once.", retest: affected_subset, est_time_min: 10}
+  owner: supercomputing-sw
+  doc_url: https://github.com/etched-ai/sw/blob/master/host/system_test/error_codes/doc/CheckPsuHealth.md#TH-PWR-0001
+  since: harness 2026.216
+  suspected_components: []
+  vendor_error_id: []
+  jira_component: ETCH / l10-test
+- error_code: TH-PWR-0002
+  name: POWER_TELEMETRY_UNAVAILABLE
+  version: 1
+  category: 6  # CATEGORY_HARDWARE
+  severity: 4  # ERROR_TRIAGE
+  quick_action: 9  # QA_ESCALATE
+  component: 1X.PWR.VBB_POWER
+  test_cases: [SohuPowerTelemetryTestCase, SohuVrmTestCase, SohuVmTestCase]
+  disposition: ERROR  # test-system problem; excluded from module yield
+  retryable: false
+  max_auto_retry: 0
+  description: >
+    Power telemetry unavailable (VBB / VRM / VM sensor RPC / collectors not
+    responding, or expected VM sensors missing from the reading response).
+  probable_causes:
+    - VBB comms failure on the golden VBB fixture
+    - Sohu DVFS RPC failure while reading VM sensors
+    - Telemetry collector not running
+  capture:
+    - suite_run_url
+    - per-test log and transcript
+    - unit_sn, fw_version, harness_version, station_id, operator_id, timestamp
+  repair_actions:
+    - {step: 1, who: operator, action: "Collect the suite/test logs and artifacts for this failure.", est_time_min: 5}
+    - {step: 2, who: escalate, action: "Escalate to Etched engineer with the collected logs.", ticket_template: ETCH}
+  owner: supercomputing-sw
+  doc_url: https://github.com/etched-ai/sw/blob/master/host/system_test/error_codes/doc/SohuPowerTelemetryTestCase.md#TH-PWR-0002
+  since: harness 2026.216
+  suspected_components: []
+  vendor_error_id: []
+  jira_component: ETCH / l10-test
+- error_code: TH-PWR-0003
+  name: POWER_DATA_OUT_OF_RANGE
+  version: 1
+  category: 6  # CATEGORY_HARDWARE
+  severity: 2  # ERROR_ISOLATE
+  quick_action: 9  # QA_ESCALATE
+  component: 1X.PWR.VBB_POWER
+  test_cases: [SohuPowerTelemetryTestCase, SohuVrmTestCase]
+  disposition: FAILED
+  retryable: false
+  max_auto_retry: 0
+  description: >
+    Power data out of the qualified range, or CPLD reports an active VRM FSM
+    fault on the mezzanine.
+  probable_causes:
+    - Module power delivery out of qualified envelope
+    - Rail fault under load
+    - Mezzanine CPLD VRM sequencing fault
+  capture:
+    - suite_run_url
+    - per-test log and transcript
+    - unit_sn, fw_version, harness_version, station_id, operator_id, timestamp
+  repair_actions:
+    - {step: 1, who: operator, action: "Collect the suite/test logs and artifacts for this failure.", est_time_min: 5}
+    - {step: 2, who: escalate, action: "Escalate to Etched engineer with the collected logs.", ticket_template: ETCH}
+  owner: supercomputing-sw
+  doc_url: https://github.com/etched-ai/sw/blob/master/host/system_test/error_codes/doc/SohuPowerTelemetryTestCase.md#TH-PWR-0003
+  since: harness 2026.216
+  suspected_components: []
+  vendor_error_id: []
+  jira_component: ETCH / l10-test
+- error_code: TH-PWR-0004
+  name: VM_SENSOR_OUT_OF_TOLERANCE
+  version: 1
+  category: 6  # CATEGORY_HARDWARE
+  severity: 2  # ERROR_ISOLATE
+  quick_action: 9  # QA_ESCALATE
+  component: 1X.PWR.VM_SENSOR
+  test_cases: [SohuVmTestCase]
+  disposition: FAILED
+  retryable: false
+  max_auto_retry: 0
+  description: >
+    VM sensor reading outside +/-5% of nominal.
+  probable_causes:
+    - Rail regulation out of tolerance
+    - VM sensor fault on the module
+  capture:
+    - suite_run_url
+    - per-test log and transcript
+    - unit_sn, fw_version, harness_version, station_id, operator_id, timestamp
+  repair_actions:
+    - {step: 1, who: operator, action: "Collect the suite/test logs and artifacts for this failure.", est_time_min: 5}
+    - {step: 2, who: escalate, action: "Escalate to Etched engineer with the collected logs.", ticket_template: ETCH}
+  owner: supercomputing-sw
+  doc_url: https://github.com/etched-ai/sw/blob/master/host/system_test/error_codes/doc/SohuVmTestCase.md#TH-PWR-0004
+  since: harness 2026.216
+  suspected_components: []
+  vendor_error_id: []
+  jira_component: ETCH / l10-test
+- error_code: TH-PWR-0005
+  name: RAIL_ADJUST_READBACK_MISMATCH
+  version: 1
+  category: 6  # CATEGORY_HARDWARE
+  severity: 2  # ERROR_ISOLATE
+  quick_action: 9  # QA_ESCALATE
+  component: 1X.PWR.VM_SENSOR
+  test_cases: [SohuVmTestCase]
+  disposition: FAILED
+  retryable: false
+  max_auto_retry: 0
+  description: >
+    Voltage rail adjustment not reflected in the VM readback.
+  probable_causes:
+    - Rail control path fault
+    - VRM not applying the requested setpoint
+  capture:
+    - suite_run_url
+    - per-test log and transcript
+    - unit_sn, fw_version, harness_version, station_id, operator_id, timestamp
+  repair_actions:
+    - {step: 1, who: operator, action: "Collect the suite/test logs and artifacts for this failure.", est_time_min: 5}
+    - {step: 2, who: escalate, action: "Escalate to Etched engineer with the collected logs.", ticket_template: ETCH}
+  owner: supercomputing-sw
+  doc_url: https://github.com/etched-ai/sw/blob/master/host/system_test/error_codes/doc/SohuVmTestCase.md#TH-PWR-0005
+  since: harness 2026.216
+  suspected_components: []
+  vendor_error_id: []
+  jira_component: ETCH / l10-test
+- error_code: TH-PWR-0006
+  name: VMIN_ABOVE_RATED_LIMIT
+  version: 1
+  category: 6  # CATEGORY_HARDWARE
+  severity: 4  # ERROR_TRIAGE
+  quick_action: 9  # QA_ESCALATE
+  component: 1X.PWR.VMIN
+  test_cases: [SohuLlamaMttTestCase]
+  disposition: FAILED
+  retryable: false
+  max_auto_retry: 0
+  description: >
+    Vmin above the rated limit for an SA/SAU rail.
+  probable_causes:
+    - Marginal silicon requiring higher voltage than rated
+    - Rail delivery drop under load
+  capture:
+    - suite_run_url
+    - per-test log and transcript
+    - unit_sn, fw_version, harness_version, station_id, operator_id, timestamp
+  repair_actions:
+    - {step: 1, who: operator, action: "Collect the suite/test logs and artifacts for this failure.", est_time_min: 5}
+    - {step: 2, who: escalate, action: "Escalate to Etched engineer with the collected logs.", ticket_template: ETCH}
+  owner: supercomputing-sw
+  doc_url: https://github.com/etched-ai/sw/blob/master/host/system_test/error_codes/doc/SohuLlamaMttTestCase.md#TH-PWR-0006
+  since: harness 2026.216
+  suspected_components: []
+  vendor_error_id: []
+  jira_component: ETCH / l10-test
+- error_code: TH-PWR-0007
+  name: UNEXPECTED_DVFS_RAMPDOWN
+  version: 1
+  category: 6  # CATEGORY_HARDWARE
+  severity: 2  # ERROR_ISOLATE
+  quick_action: 9  # QA_ESCALATE
+  component: 1X.PWR.DVFS
+  test_cases: [SohuLlamaMttTestCase, SohuPowerVirusTestCase]
+  disposition: FAILED
+  retryable: false
+  max_auto_retry: 0
+  description: >
+    Unexpected DVFS rampdown event during a workload.
+  probable_causes:
+    - Power or thermal excursion triggering DVFS
+    - Marginal rail under workload transients
+  capture:
+    - suite_run_url
+    - per-test log and transcript
+    - unit_sn, fw_version, harness_version, station_id, operator_id, timestamp
+  repair_actions:
+    - {step: 1, who: operator, action: "Collect the suite/test logs and artifacts for this failure.", est_time_min: 5}
+    - {step: 2, who: escalate, action: "Escalate to Etched engineer with the collected logs.", ticket_template: ETCH}
+  owner: supercomputing-sw
+  doc_url: https://github.com/etched-ai/sw/blob/master/host/system_test/error_codes/doc/SohuLlamaMttTestCase.md#TH-PWR-0007
+  since: harness 2026.216
+  suspected_components: []
+  vendor_error_id: []
+  jira_component: ETCH / l10-test
+- error_code: TH-PWR-0008
+  name: MODULE_POWER_ON_FAILURE
+  version: 1
+  category: 6  # CATEGORY_HARDWARE
+  severity: 2  # ERROR_ISOLATE
+  quick_action: 6  # QA_RETRY
+  component: 1X.PWR.POWER_ON
+  test_cases: [BootloaderResultTestCase]
+  disposition: FAILED
+  retryable: true
+  max_auto_retry: 3
+  description: >
+    Module failed to power on (indicators off, rail fault or short).
+  probable_causes:
+    - "Rail short (observed: VOUT_13P5_IBC, VDD_1P2)"
+    - "VRM stuck below regulation (observed: VCC_VRM at 0.7V)"
+    - Devkit cannot communicate with the Sohu module, it is likely that the bootloader is not running because the PV1 is not powering on
+  capture:
+    - suite_run_url
+    - per-test log and transcript
+    - unit_sn, fw_version, harness_version, station_id, operator_id, timestamp
+  repair_actions:
+    - {step: 1, who: operator, action: "Verify that the green power indicators on the Sohu module are ON.", est_time_min: 5}
+    - {step: 2, who: operator, action: "Verify that both the PCIe cable and power cable are connected correctly and securely.", est_time_min: 5}
+    - {step: 3, who: operator, action: "If there is no trouble found, retest once.", retest: affected_subset, est_time_min: 10}
+  owner: supercomputing-sw
+  doc_url: https://github.com/etched-ai/sw/blob/master/host/system_test/error_codes/doc/BootloaderResultTestCase.md#TH-PWR-0008
+  since: harness 2026.216
+  suspected_components: []
+  vendor_error_id: []
+  jira_component: ETCH / l10-test
+
+# TH-SN-0002 (FRU EEPROM content/checksum invalid) is reserved but
+# NOT allocated: the EEPROM validation test does not exist yet.
+# One code covers both "could not read the ID" and "ID does not match": in both
+# cases the module cannot be identified against its genealogy record, and the
+# repair flow (retry read, check SFIS, isolate) is identical.
+- error_code: TH-SN-0001
+  name: CHIP_ID_READ_OR_MISMATCH
+  version: 1
+  category: 11  # CATEGORY_DATA
+  severity: 2  # ERROR_ISOLATE
+  quick_action: 9  # QA_ESCALATE
+  component: 1X.SN.CHIP_ID
+  test_cases: [SohuChipIdTestCase]
+  disposition: FAILED
+  retryable: false
+  max_auto_retry: 0
+  description: >
+    The sohu_chip_id sysfs attribute of an enumerated Sohu endpoint could not
+    be read or parsed, read back as all ones (device in reset), or reported a
+    chip ID other than the one the resource configuration expects for that
+    PCIe location.
+  probable_causes:
+    - Sohu ASIC held in reset or dropped off the PCIe link mid-read
+    - Wrong or unprogrammed chip ID strapping/efuse on the module
+    - Module populated in a baseboard slot other than the one recorded in genealogy
+    - Firmware failed to publish the chip ID to the sysfs attribute
+  capture:
+    - suite_run_url
+    - expected chip_id, resolved BDF, and raw sysfs attribute contents
+    - lspci topology and dmesg excerpt for the run window
+    - unit_sn, fw_version, harness_version, station_id, operator_id, timestamp
+  repair_actions:
+    - {step: 1, who: operator, action: "Collect the suite/test logs and artifacts for this failure.", est_time_min: 5}
+    - {step: 2, who: escalate, action: "Escalate to Etched engineer with the collected logs.", ticket_template: ETCH}
+  owner: supercomputing-sw
+  doc_url: https://github.com/etched-ai/sw/blob/master/host/system_test/error_codes/doc/SohuChipIdTestCase.md#TH-SN-0001
+  since: harness 2026.216
+  suspected_components: [SOHU_ASIC, BASEBOARD]
+  vendor_error_id: []
+  jira_component: ETCH / l10-test
+
+# TH-SOHU-0013 (NLU op numeric mismatch) is reserved but NOT
+# allocated: NLU module tests are not implemented yet.
+- error_code: TH-SOHU-0001
+  name: ASIC_RESET_DEASSERT_FAILED
+  version: 1
+  category: 6  # CATEGORY_HARDWARE
+  severity: 2  # ERROR_ISOLATE
+  quick_action: 9  # QA_ESCALATE
+  component: 1X.SOHU.RESET
+  test_cases: [ProgramSecureBootloaderTestCase, BootloaderResultTestCase]
+  disposition: FAILED
+  retryable: false
+  max_auto_retry: 0
+  description: ASIC reset deassert failed.
+  probable_causes:
+    - ASIC reset could not be deasserted
+  capture:
+    - suite_run_url
+    - per-test log and transcript
+    - ASIC reset operation transcript
+    - harness_version, station_id, operator_id, timestamp
+  repair_actions:
+    - {step: 1, who: operator, action: "Collect the suite/test logs and artifacts for this failure.", est_time_min: 5}
+    - {step: 2, who: escalate, action: "Escalate to Etched engineer with the collected logs.", ticket_template: ETCH}
+  owner: supercomputing-sw
+  doc_url: https://github.com/etched-ai/sw/blob/master/host/system_test/error_codes/doc/ProgramSecureBootloaderTestCase.md#TH-SOHU-0001
+  since: harness 2026.217
+  suspected_components: [SOHU]
+  vendor_error_id: []
+  jira_component: ETCH / l10-test
+
+# 1X module (SLT) code. Quick action follows the 2026-08-04 error-code review:
+# production rejected automated retry, so QA_ESCALATE with no retry budget.
+#
+# Shared code: the spreadsheet also lists SohuVfioPingTestCase,
+# SaSortRampupHbmSingleChipTestCase and SohuWeightLoadTestCase, which belong to
+# other DRIs. They are named in test_cases so the entry is complete; this PR
+# wires only the FLR test case.
+- error_code: TH-SOHU-0002
+  name: SOHU_NOT_PINGABLE
+  version: 1
+  category: 6  # CATEGORY_HARDWARE
+  severity: 2  # ERROR_ISOLATE — module cannot be trusted for workload
+  quick_action: 9  # QA_ESCALATE — no auto-retry per 2026-08-04 review
+  component: 1X.SOHU.ASIC
+  test_cases: [SohuFlrTestCase, SohuVfioPingTestCase, SaSortRampupHbmSingleChipTestCase, SohuWeightLoadTestCase]
+  disposition: FAILED
+  retryable: false
+  max_auto_retry: 0
+  description: >
+    The Sohu device did not respond to a ping over the RPC proxy: the firmware
+    is not running, not reachable, or the device dropped off the proxy. Emitted
+    when a device that had been posting stops answering, for example the
+    post-campaign sweep after a repeated-FLR run.
+  probable_causes:
+    - Sohu firmware hung or crashed and stopped servicing RPCs
+    - Device dropped off the PCIe tree / vfio proxy
+    - Marginal reset or power sequencing leaving the ASIC unresponsive
+  capture:
+    - suite_run_url
+    - per-test log naming the unresponsive device index
+    - UART log for the run window
+    - lspci / proxy device list at the time of the failure
+    - unit_sn, fw_version, harness_version, station_id, operator_id, timestamp
+  repair_actions:
+    - {step: 1, who: operator, action: "Collect the suite/test logs and artifacts for this failure.", est_time_min: 5}
+    - {step: 2, who: escalate, action: "Escalate to Etched engineer with the collected logs.", ticket_template: ETCH}
+  owner: supercomputing-sw
+  doc_url: https://github.com/etched-ai/sw/blob/master/host/system_test/error_codes/doc/SohuFlrTestCase.md#TH-SOHU-0002
+  since: harness 2026.216
+  suspected_components: [ASIC, MEZZ_MODULE]
+  vendor_error_id: []
+  jira_component: ETCH / MLT
+- error_code: TH-SOHU-0003
+  name: PLDM_SENSOR_CHECK_FAILED
+  version: 1
+  category: 6  # CATEGORY_HARDWARE
+  severity: 2  # ERROR_ISOLATE
+  quick_action: 9  # QA_ESCALATE
+  component: 1X.SOHU.PLDM
+  test_cases: [SohuSecureBootRecoveryUpdateTestCase]
+  disposition: FAILED
+  retryable: false
+  max_auto_retry: 0
+  description: >
+    PLDM sensor discoverability or sanity check failed (boot-phase gate).
+  probable_causes:
+    - Firmware PLDM stack not exposing sensors
+    - Sensor fault on the module
+  capture:
+    - suite_run_url
+    - per-test log and transcript
+    - unit_sn, fw_version, harness_version, station_id, operator_id, timestamp
+  repair_actions:
+    - {step: 1, who: operator, action: "Collect the suite/test logs and artifacts for this failure.", est_time_min: 5}
+    - {step: 2, who: escalate, action: "Escalate to Etched engineer with the collected logs.", ticket_template: ETCH}
+  owner: supercomputing-sw
+  doc_url: https://github.com/etched-ai/sw/blob/master/host/system_test/error_codes/doc/SohuSecureBootRecoveryUpdateTestCase.md#TH-SOHU-0003
+  since: harness 2026.216
+  suspected_components: []
+  vendor_error_id: []
+  jira_component: ETCH / l10-test
+- error_code: TH-SOHU-0004
+  name: I2C_PERIPHERAL_READ_FAIL
+  version: 1
+  category: 6  # CATEGORY_HARDWARE
+  severity: 2  # ERROR_ISOLATE
+  quick_action: 9  # QA_ESCALATE
+  component: 1X.SOHU.MEZZ_I2C
+  test_cases: [SohuI2cTestCase]
+  disposition: FAILED
+  retryable: false
+  max_auto_retry: 0
+  description: >
+    An I2C transaction on the Sohu mezzanine failed. This covers bring-up
+    (initializing the ASIC-debug mux or any of the four Sohu I2C controllers,
+    and reading the mezzanine board type) as well as the per-device probes on
+    I2C0-I2C3, where a probe either failed its transaction or returned data that
+    did not match the expected device identifier/register value. The first
+    failure ends the test; for a probe it identifies the bus, device, and
+    address.
+  probable_causes:
+    - Peripheral unpowered or not responding on the addressed bus
+    - Wrong or unexpected device populated at the probed address
+    - Open or marginal I2C trace / connector contact on the module
+    - Sohu I2C controller fault
+    - ASIC-debug I2C mux not responding, leaving no path to the mezzanine buses
+  capture:
+    - suite_run_url
+    - per-test log naming the failing bus, device, and I2C address
+    - mezzanine board type reported by the CPLD (selects whether I2C2 is probed)
+    - mezz/VBB UART log for the run window
+    - unit_sn, fw_version, harness_version, station_id, operator_id, timestamp
+  repair_actions:
+    - {step: 1, who: operator, action: "Collect the suite/test logs and artifacts for this failure.", est_time_min: 5}
+    - {step: 2, who: escalate, action: "Escalate to Etched engineer with the collected logs.", ticket_template: ETCH}
+  owner: supercomputing-sw
+  doc_url: https://github.com/etched-ai/sw/blob/master/host/system_test/error_codes/doc/SohuI2cTestCase.md#TH-SOHU-0004
+  since: harness 2026.216
+  suspected_components: [ASIC, MEZZ_MODULE]
+  vendor_error_id: []
+  jira_component: ETCH / MLT
+- error_code: TH-SOHU-0005
+  name: GPIO_LOOPBACK_MISMATCH
+  version: 1
+  category: 6  # CATEGORY_HARDWARE
+  severity: 2  # ERROR_ISOLATE
+  quick_action: 9  # QA_ESCALATE
+  component: 1X.SOHU.MCPU_GPIO
+  test_cases: [SohuGpioTestCase]
+  disposition: FAILED
+  retryable: false
+  max_auto_retry: 0
+  description: >
+    An MCPU GPIO did not read back its driven value. Covers both halves of the
+    test: the chip-ID strap pins reading a value other than the expected
+    chip_id, and the per-pin output->input loopback failing to observe either
+    the flipped value or the restored original.
+  probable_causes:
+    - Open, shorted, or marginal GPIO net on the module
+    - MCPU GPIO pad or pin-mux fault
+    - Chip-ID strap resistors incorrect or not populated for this module
+  capture:
+    - suite_run_url
+    - per-test log naming the failing pin(s) and the expected/read values
+    - mezz/VBB UART log for the run window
+    - unit_sn, fw_version, harness_version, station_id, operator_id, timestamp
+  repair_actions:
+    - {step: 1, who: operator, action: "Collect the suite/test logs and artifacts for this failure.", est_time_min: 5}
+    - {step: 2, who: escalate, action: "Escalate to Etched engineer with the collected logs.", ticket_template: ETCH}
+  owner: supercomputing-sw
+  doc_url: https://github.com/etched-ai/sw/blob/master/host/system_test/error_codes/doc/SohuGpioTestCase.md#TH-SOHU-0005
+  since: harness 2026.216
+  suspected_components: [ASIC, MEZZ_MODULE]
+  vendor_error_id: []
+  jira_component: ETCH / MLT
+- error_code: TH-SOHU-0006
+  name: UART_PING_LOG_MISMATCH
+  version: 1
+  category: 6  # CATEGORY_HARDWARE
+  severity: 2  # ERROR_ISOLATE
+  quick_action: 9  # QA_ESCALATE
+  component: 1X.SOHU.UART
+  test_cases: [SohuUartTestCase]
+  disposition: FAILED
+  retryable: false
+  max_auto_retry: 0
+  description: >
+    UART ping log message absent or content mismatch.
+  probable_causes:
+    - UART path fault on the module
+    - Firmware boot log not produced
+  capture:
+    - suite_run_url
+    - per-test log and transcript
+    - unit_sn, fw_version, harness_version, station_id, operator_id, timestamp
+  repair_actions:
+    - {step: 1, who: operator, action: "Collect the suite/test logs and artifacts for this failure.", est_time_min: 5}
+    - {step: 2, who: escalate, action: "Escalate to Etched engineer with the collected logs.", ticket_template: ETCH}
+  owner: supercomputing-sw
+  doc_url: https://github.com/etched-ai/sw/blob/master/host/system_test/error_codes/doc/SohuUartTestCase.md#TH-SOHU-0006
+  since: harness 2026.216
+  suspected_components: []
+  vendor_error_id: []
+  jira_component: ETCH / l10-test
+- error_code: TH-SOHU-0007
+  name: JTAG_READBACK_MISMATCH
+  version: 1
+  category: 6  # CATEGORY_HARDWARE
+  severity: 2  # ERROR_ISOLATE
+  quick_action: 9  # QA_ESCALATE
+  component: 1X.SOHU.JTAG
+  test_cases: [SohuJtagTestCase]
+  disposition: FAILED
+  retryable: false
+  max_auto_retry: 0
+  description: >
+    A JTAG check did not produce the expected value, or could not be read at
+    all: an ARC core cluster_id, the SA row/column build configuration, or a
+    failure to select a core or read a register over the chain. The
+    core1_cpu_reset read is recorded as a diagnostic measurement only and never
+    fails the test. Failures before any JTAG transaction take the harness codes
+    instead — an unknown jtag_interface is TH-HAR-0002, and no adapter matching
+    serial_prefix or a missing OpenOCD binary are TH-HAR-0003.
+  probable_causes:
+    - Marginal or defective ARC core / SA fabric on the ASIC
+    - JTAG chain integrity problem on the module
+  capture:
+    - suite_run_url
+    - per-test log with each expected/read register value
+    - OpenOCD transcript for the run window
+    - unit_sn, fw_version, harness_version, station_id, operator_id, timestamp
+  repair_actions:
+    - {step: 1, who: operator, action: "Collect the suite/test logs and artifacts for this failure.", est_time_min: 5}
+    - {step: 2, who: escalate, action: "Escalate to Etched engineer with the collected logs.", ticket_template: ETCH}
+  owner: supercomputing-sw
+  doc_url: https://github.com/etched-ai/sw/blob/master/host/system_test/error_codes/doc/SohuJtagTestCase.md#TH-SOHU-0007
+  since: harness 2026.216
+  suspected_components: [ASIC]
+  vendor_error_id: []
+  jira_component: ETCH / MLT
+- error_code: TH-SOHU-0008
+  name: EFUSE_REGION_READ_FAILURE
+  version: 1
+  category: 6  # CATEGORY_HARDWARE
+  severity: 2  # ERROR_ISOLATE
+  quick_action: 9  # QA_ESCALATE
+  component: 1X.SOHU.EFUSE
+  test_cases: [SohuEfuseTestCase]
+  disposition: FAILED
+  retryable: false
+  max_auto_retry: 0
+  description: >
+    Reading the eFuse region over RPC failed, so no init config could be
+    decoded from the module.
+  probable_causes:
+    - Defective eFuse macro or sense path on the module
+    - eFuse region never programmed at OSAT (blank or corrupt map)
+    - Sohu RPC link to the module dropped mid-read
+  capture:
+    - suite_run_url
+    - full read_efuse_to_protobuf error text
+    - Sohu RPC transcript for the read window
+    - unit_sn, fw_version, harness_version, station_id, operator_id, timestamp
+  repair_actions:
+    - {step: 1, who: operator, action: "Collect the suite/test logs and artifacts for this failure.", est_time_min: 5}
+    - {step: 2, who: escalate, action: "Escalate to Etched engineer with the collected logs.", ticket_template: ETCH}
+  owner: supercomputing-sw
+  doc_url: https://github.com/etched-ai/sw/blob/master/host/system_test/error_codes/doc/SohuEfuseTestCase.md#TH-SOHU-0008
+  since: harness 2026.216
+  suspected_components: [SOHU_ASIC]
+  vendor_error_id: []
+  jira_component: ETCH / l10-test
+
+# Fuse content that IS readable but records an incomplete WS/FT flow. Retry is
+# futile - the fuses are burnt - hence no auto-retry.
+- error_code: TH-SOHU-0009
+  name: EFUSE_WS_FT_STATUS_INCOMPLETE
+  version: 1
+  category: 11  # CATEGORY_DATA — the fuse content itself is wrong, not the read
+  severity: 2  # ERROR_ISOLATE
+  quick_action: 9  # QA_ESCALATE
+  component: 1X.SOHU.EFUSE
+  test_cases: [SohuEfuseTestCase]
+  disposition: FAILED
+  retryable: false
+  max_auto_retry: 0
+  description: >
+    The eFuse read succeeded but a wafer-sort or final-test completion flag
+    (wafer_sort_complete, final_test_complete, mbist_complete, sa_complete,
+    sensor_complete or hbm_complete) is False, so the module carries no record
+    of a completed WS/FT flow including MBIST and SA repair.
+  probable_causes:
+    - Module skipped or aborted part of the WS/FT flow at the OSAT
+    - MBIST or SA repair did not complete before the summary was burnt
+    - Wrong or partially programmed eFuse map version for this build
+  capture:
+    - suite_run_url
+    - both efuse init config text protos recorded by the test
+    - the list of flags reported False, with copy index
+    - WS/FT genealogy for the wafer lot / wafer / X-Y location
+    - unit_sn, fw_version, harness_version, station_id, operator_id, timestamp
+  repair_actions:
+    - {step: 1, who: operator, action: "Collect the suite/test logs and artifacts for this failure.", est_time_min: 5}
+    - {step: 2, who: escalate, action: "Escalate to Etched engineer with the collected logs.", ticket_template: ETCH}
+  owner: supercomputing-sw
+  doc_url: https://github.com/etched-ai/sw/blob/master/host/system_test/error_codes/doc/SohuEfuseTestCase.md#TH-SOHU-0009
+  since: harness 2026.216
+  suspected_components: [SOHU_ASIC]
+  vendor_error_id: []
+  jira_component: ETCH / l10-test
+- error_code: TH-SOHU-0010
+  name: BUS_CONNECTIVITY_CSR_ACCESS_FAIL
+  version: 1
+  category: 6  # CATEGORY_HARDWARE
+  severity: 2  # ERROR_ISOLATE
+  quick_action: 9  # QA_ESCALATE
+  component: 1X.SOHU.SOC_BUS
+  test_cases: [SohuBusConnectivityTestCase]
+  disposition: FAILED
+  retryable: false
+  max_auto_retry: 0
+  description: >
+    The mCPU-resident bus connectivity sweep reported a non-zero failed count:
+    at least one CSR check across the SoC blocks (MCPU, ISC, IPU, CSRAM, WCU,
+    GPIO, PAD, sensors hub, PCIe, SAMU, datalink, MACs) did not pass. A check
+    fails either because a write/verify/restore readback did not return the
+    written pattern, or because a read-only field did not hold its expected
+    value.
+  probable_causes:
+    - Defective CSR block or unreachable register slave on the internal bus
+    - Clock or reset not released for the affected block
+    - Wrong firmware image or chip variant for the DUT (build-config field mismatch)
+  capture:
+    - suite_run_url
+    - mCPU log with the per-register FAIL lines (address, bit position/width, expected vs. got)
+    - tests_run / tests_failed measurements
+    - failing CSR block for affected_instances
+    - unit_sn, fw_version, harness_version, station_id, operator_id, timestamp
+  repair_actions:
+    - {step: 1, who: operator, action: "Collect the suite/test logs and artifacts for this failure.", est_time_min: 5}
+    - {step: 2, who: escalate, action: "Escalate to Etched engineer with the collected logs.", ticket_template: ETCH}
+  owner: supercomputing-sw
+  doc_url: https://github.com/etched-ai/sw/blob/master/host/system_test/error_codes/doc/SohuBusConnectivityTestCase.md#TH-SOHU-0010
+  since: harness 2026.216
+  suspected_components: [SOHU_ASIC]
+  vendor_error_id: []
+  jira_component: ETCH / l10-test
+
+# TH-SOHU-0011 identity is pre-allocated in the legacy _Etched Error Code
+# sheet (1X Module Test tab): keep it verbatim.
+- error_code: TH-SOHU-0011
+  name: SRAM_TEST_FAIL
+  version: 1
+  category: 3  # CATEGORY_MEMORY (sheet Error_Type: Memory)
+  severity: 2  # ERROR_ISOLATE
+  quick_action: 9  # QA_ESCALATE
+  component: MLT.SOHU.SOHU_CHIP  # 1X Module Test (MLT) station
+  test_cases: [SohuSramMemoryTestCase]
+  disposition: FAILED
+  retryable: false
+  max_auto_retry: 0
+  description: >
+    On-chip SRAM test failure (stuck bits / readback mismatch) - the RPC
+    read/write/invert checks reported failing SRAM regions, or the March C+
+    binary exited non-zero. Failing SRAM names go in the message /
+    affected_instances, never into new codes (spec §1.2). Note - a non-zero
+    March C+ exit is not yet distinguishable from a launch error; refine when
+    the binary exposes an exit-status contract.
+  probable_causes:
+    - Defective on-die SRAM cells (stuck bits) in ISC/NLU/theta/softmax SRAMs
+    - Marginal SRAM timing under nominal voltage/frequency
+  capture:
+    - suite_run_url
+    - failing SRAM names (affected_instances)
+    - March C+ binary stdout/stderr and exit code
+    - unit_sn, fw_version, harness_version, station_id, operator_id, timestamp
+  repair_actions:
+    - {step: 1, who: operator, action: "Collect the suite/test logs and artifacts for this failure.", est_time_min: 5}
+    - {step: 2, who: escalate, action: "Escalate to Etched engineer with the collected logs.", ticket_template: ETCH}
+  owner: supercomputing-sw
+  doc_url: https://github.com/etched-ai/sw/blob/master/host/system_test/error_codes/doc/SohuSramMemoryTestCase.md#TH-SOHU-0011
+  since: harness 2026.216
+  suspected_components: [SOHU_CHIP]
+  vendor_error_id: []
+  jira_component: ETCH / l10-test
+- error_code: TH-SOHU-0012
+  name: SA_MATMUL_NUMERIC_MISMATCH
+  version: 1
+  category: 6  # CATEGORY_HARDWARE
+  severity: 2  # ERROR_ISOLATE
+  quick_action: 9  # QA_ESCALATE
+  component: 1X.SOHU.SA
+  test_cases: [SaSortRampupHbmSingleChipTestCase]
+  disposition: FAILED
+  retryable: false
+  max_auto_retry: 0
+  description: >
+    An SA matmul dispatcher test binary exited non-zero: systolic-array
+    outputs did not match the funcsim reference. sa_sort screening tolerates
+    a bounded number of defective SA columns, so a non-zero exit means the
+    mismatches went beyond what the health map is allowed to mask out.
+  probable_causes:
+    - Defective systolic-array column(s) or DPU row producing wrong products
+    - Marginal voltage or clock for the SA zones at the densities under test
+    - HBM weight delivery fault feeding the SA (whole DPU row wiped out)
+  capture:
+    - suite_run_url
+    - per-test log with the DPU health matrix and defective SA column list
+    - datatype, matmul dimensions and defective columns for affected_instances
+    - saved SA health map for the run
+    - unit_sn, fw_version, harness_version, station_id, operator_id, timestamp
+  repair_actions:
+    - {step: 1, who: operator, action: "Collect the suite/test logs and artifacts for this failure.", est_time_min: 5}
+    - {step: 2, who: escalate, action: "Escalate to Etched engineer with the collected logs.", ticket_template: ETCH}
+  owner: supercomputing-sw
+  doc_url: https://github.com/etched-ai/sw/blob/master/host/system_test/error_codes/doc/SaSortRampupHbmSingleChipTestCase.md#TH-SOHU-0012
+  since: harness 2026.216
+  suspected_components: [SOHU_ASIC]
+  vendor_error_id: []
+  jira_component: ETCH / l10-test
+- error_code: TH-SOHU-0014
+  name: ATTENTION_SAU_NUMERIC_MISMATCH
+  version: 1
+  category: 6  # CATEGORY_HARDWARE
+  severity: 2  # ERROR_ISOLATE
+  quick_action: 9  # QA_ESCALATE
+  component: 1X.SOHU.SAU
+  test_cases: [RunAllAttnTestsSingleChipTestCase, RunAllAttnHbmBypassTestsSingleChipTestCase, RunKvFlushTestsSingleChipTestCase, KvFlushAndAttentionSingleChipTestCase, KvFlushAndAttentionInterleavedSingleChipTestCase]
+  disposition: FAILED
+  retryable: false
+  max_auto_retry: 0
+  description: >
+    An attention/SAU dispatcher test binary exited non-zero: one or more
+    attention, KV-flush or SAU operations did not match the funcsim
+    reference.
+  probable_causes:
+    - Defective SAU macro (PPU / WSSA / SCSA / softmax) producing wrong results
+    - KV cache read/write path fault
+    - Marginal voltage or clock for the SAU zones under test
+  capture:
+    - suite_run_url
+    - per-test log with the binary's mismatch output
+    - failing block/macro for affected_instances
+    - unit_sn, fw_version, harness_version, station_id, operator_id, timestamp
+  repair_actions:
+    - {step: 1, who: operator, action: "Collect the suite/test logs and artifacts for this failure.", est_time_min: 5}
+    - {step: 2, who: escalate, action: "Escalate to Etched engineer with the collected logs.", ticket_template: ETCH}
+  owner: supercomputing-sw
+  doc_url: https://github.com/etched-ai/sw/blob/master/host/system_test/error_codes/doc/RunAllAttnTestsSingleChipTestCase.md#TH-SOHU-0014
+  since: harness 2026.216
+  suspected_components: [SOHU_ASIC]
+  vendor_error_id: []
+  jira_component: ETCH / l10-test
+- error_code: TH-SOHU-0015
+  name: WORKLOAD_HANG_OPERATION_TIMEOUT
+  version: 1
+  category: 6  # CATEGORY_HARDWARE
+  severity: 2  # ERROR_ISOLATE
+  quick_action: 9  # QA_ESCALATE
+  component: 1X.SOHU.WORKLOAD
+  test_cases: [KayakTestCase, SohuPowerVirusTestCase, SohuLlamaMttTestCase]
+  disposition: FAILED
+  retryable: false
+  max_auto_retry: 0
+  description: Workload hang / operation timeout.
+  probable_causes:
+    - SOHU workload or operation did not complete within its timeout
+  capture:
+    - suite_run_url
+    - per-test log and transcript
+    - device state captured before recovery
+    - unit_sn, harness_version, station_id, operator_id, timestamp
+  repair_actions:
+    - {step: 1, who: operator, action: "Collect the suite/test logs and artifacts for this failure.", est_time_min: 5}
+    - {step: 2, who: escalate, action: "Escalate to Etched engineer with the collected logs.", ticket_template: ETCH}
+  owner: supercomputing-sw
+  doc_url: https://github.com/etched-ai/sw/blob/master/host/system_test/error_codes/doc/KayakTestCase.md#TH-SOHU-0015
+  since: harness 2026.216
+  suspected_components: [SOHU]
+  vendor_error_id: []
+  jira_component: ETCH / l10-test  # known bugs: ETCH-35548
+- error_code: TH-SOHU-0016
+  name: WEIGHT_LOAD_SPOT_CHECK_MISMATCH
+  version: 1
+  category: 11  # CATEGORY_DATA
+  severity: 2  # ERROR_ISOLATE
+  quick_action: 9  # QA_ESCALATE
+  component: 1X.SOHU.WEIGHT_LOAD
+  test_cases: [SohuWeightLoadTestCase]
+  disposition: FAILED
+  retryable: false
+  max_auto_retry: 0
+  description: >
+    Weight-load spot check failed: HBM-resident weights did not match the
+    on-disk model after load (weight_load_test_app non-zero exit).
+  probable_causes:
+    - HBM write/read path corrupting weights
+    - DMA addressing fault
+    - Incomplete or corrupted weight transfer into HBM
+  capture:
+    - suite_run_url
+    - per-test log and transcript (Weight mismatch lines)
+    - unit_sn, fw_version, harness_version, station_id, operator_id, timestamp
+  repair_actions:
+    - {step: 1, who: operator, action: "Collect the suite/test logs and artifacts for this failure.", est_time_min: 5}
+    - {step: 2, who: escalate, action: "Escalate to Etched engineer with the collected logs.", ticket_template: ETCH}
+  owner: supercomputing-sw
+  doc_url: https://github.com/etched-ai/sw/blob/master/host/system_test/error_codes/doc/SohuWeightLoadTestCase.md#TH-SOHU-0016
+  since: harness 2026.216
+  suspected_components: [ASIC, HBM, MEZZ_MODULE]
+  vendor_error_id: []
+  jira_component: ETCH / MLT
+
+# 1X module (SLT) code. Quick action follows the 2026-08-04 error-code review:
+# production rejected automated retry, so QA_ESCALATE with no retry budget.
+- error_code: TH-SOHU-0017
+  name: INFERENCE_DISPATCH_TIME_ABOVE_LIMIT
+  version: 1
+  category: 6  # CATEGORY_HARDWARE
+  severity: 2  # ERROR_ISOLATE — module cannot be trusted for workload
+  quick_action: 9  # QA_ESCALATE — no auto-retry per 2026-08-04 review
+  component: 1X.SOHU.ASIC
+  test_cases: [SohuLlamaMttTestCase]
+  disposition: FAILED
+  retryable: false
+  max_auto_retry: 0
+  description: >
+    Sustained inference throughput on the million-token test did not reach the
+    expected chip tokens/s (95% of the suite's expected_chip_tokens_per_second).
+    Not wired yet: the check runs inside llama_mtt_app and the harness only sees
+    the exit status, so a non-zero exit cannot be told apart from a
+    model-creation or dataset failure. Emitting it needs the binary to signal the
+    threshold failure distinctly, or the harness to parse MTT_results/metrics.txt.
+  probable_causes:
+    - Chip sustaining a lower clock than expected under continuous load
+    - Thermal or power throttling during the run
+    - Marginal SA/HBM path reducing effective inference rate
+  capture:
+    - suite_run_url
+    - full llama_mtt_app stdout/stderr with the measured tokens/s
+    - configured expected_chip_tokens_per_second and the 0.95 lower bound
+    - DVFS and thermal telemetry captured by the monitor during the run
+    - unit_sn, fw_version, harness_version, station_id, operator_id, timestamp
+  repair_actions:
+    - {step: 1, who: operator, action: "Collect the suite/test logs and artifacts for this failure.", est_time_min: 5}
+    - {step: 2, who: escalate, action: "Escalate to Etched engineer with the collected logs.", ticket_template: ETCH}
+  owner: supercomputing-sw
+  doc_url: https://github.com/etched-ai/sw/blob/master/host/system_test/error_codes/doc/SohuLlamaMttTestCase.md#TH-SOHU-0017
+  since: harness 2026.216
+  suspected_components: [ASIC]
+  vendor_error_id: []
+  jira_component: ETCH / MLT
+- error_code: TH-SOHU-0018
+  name: END_TO_END_INFERENCE_NUMERIC_MISMATCH
+  version: 1
+  category: 6  # CATEGORY_HARDWARE
+  severity: 2  # ERROR_ISOLATE
+  quick_action: 9  # QA_ESCALATE
+  component: 1X.SOHU.INFERENCE
+  test_cases: [SohuLlama8bFp8PrefillTestCase, SohuLlama8bFp8ForwardTestCase, SohuLlamaForwardIteratedTestCase, KayakTestCase]
+  disposition: FAILED
+  retryable: false
+  max_auto_retry: 0
+  description: End-to-end inference numeric mismatch vs reference.
+  probable_causes:
+    - SOHU inference output did not match the expected reference
+  capture:
+    - suite_run_url
+    - per-test log and transcript
+    - numeric comparison output
+    - unit_sn, harness_version, station_id, operator_id, timestamp
+  repair_actions:
+    - {step: 1, who: operator, action: "Collect the suite/test logs and artifacts for this failure.", est_time_min: 5}
+    - {step: 2, who: escalate, action: "Escalate to Etched engineer with the collected logs.", ticket_template: ETCH}
+  owner: supercomputing-sw
+  doc_url: https://github.com/etched-ai/sw/blob/master/host/system_test/error_codes/doc/SohuLlama8bFp8PrefillTestCase.md#TH-SOHU-0018
+  since: harness 2026.216
+  suspected_components: [SOHU]
+  vendor_error_id: []
+  jira_component: ETCH / l10-test  # known bugs: ETCH-34695 ETCH-35582
+
+# 1X module (SLT) code. Quick action follows the 2026-08-04 error-code review:
+# production rejected automated retry, so QA_ESCALATE with no retry budget.
+- error_code: TH-SOHU-0019
+  name: FLR_FAILED
+  version: 1
+  category: 6  # CATEGORY_HARDWARE
+  severity: 2  # ERROR_ISOLATE — module cannot be trusted for workload
+  quick_action: 9  # QA_ESCALATE — no auto-retry per 2026-08-04 review
+  component: 1X.SOHU.PCIE_FLR
+  test_cases: [SohuFlrTestCase]
+  disposition: FAILED
+  retryable: false
+  max_auto_retry: 0
+  description: >
+    A Function Level Reset cycle did not complete cleanly: the reset request
+    failed or went unanswered within flr_timeout_s (default 5.0s), or the
+    device did not become available and pingable again within
+    recovery_timeout_s (default 10.0s). Reported for the first failing
+    iteration of the FLR campaign; per-iteration round-trip times are recorded
+    as flr_round_trip_* measurements and are not compared against a limit.
+  probable_causes:
+    - Sohu firmware not re-initialising cleanly after FLR
+    - PCIe link failing to retrain within the recovery window
+    - Marginal reset or power sequencing on the module
+  capture:
+    - suite_run_url
+    - per-test log with the failing iteration index and measured FLR durations
+    - PCIe link state and lspci output after the failing reset
+    - unit_sn, fw_version, harness_version, station_id, operator_id, timestamp
+  repair_actions:
+    - {step: 1, who: operator, action: "Collect the suite/test logs and artifacts for this failure.", est_time_min: 5}
+    - {step: 2, who: escalate, action: "Escalate to Etched engineer with the collected logs.", ticket_template: ETCH}
+  owner: supercomputing-sw
+  doc_url: https://github.com/etched-ai/sw/blob/master/host/system_test/error_codes/doc/SohuFlrTestCase.md#TH-SOHU-0019
+  since: harness 2026.216
+  suspected_components: [ASIC, MEZZ_MODULE]
+  vendor_error_id: []
+  jira_component: ETCH / MLT
+
+# TH-SOHU-0020 identity is pre-allocated in the legacy _Etched Error Code
+# sheet (1X Module Test tab): keep it verbatim. Known bug reference:
+# ETCH-35301.
+- error_code: TH-SOHU-0020
+  name: SAU_PLL_CONFIG_FAIL
+  version: 1
+  category: 6  # CATEGORY_HARDWARE
+  severity: 2  # ERROR_ISOLATE
+  quick_action: 9  # QA_ESCALATE
+  component: MLT.SOHU.SOHU_CHIP  # 1X Module Test (MLT) station, not L10
+  test_cases: [SohuSauPllPhaseAlignmentTestCase, SetPllGlitchFreqTestCase]
+  disposition: FAILED
+  retryable: false
+  max_auto_retry: 0
+  description: >
+    SAU/SA PLL configuration failure - firmware did not report a safe SAU PLL
+    phase alignment after FLR, or a requested PLL glitch frequency did not
+    read back within 5% of the target before the readback timeout.
+  probable_causes:
+    - Marginal SAU/SA PLL failing to lock to a safe phase
+    - DVFS/PLL control path fault (glitch frequency not applied)
+    - Firmware phase-finding did not run or reported failure (see ETCH-35301)
+  capture:
+    - suite_run_url
+    - core_reset_handler log excerpt
+    - DVFS zone frequency readbacks (requested vs actual)
+    - unit_sn, fw_version, harness_version, station_id, operator_id, timestamp
+  repair_actions:
+    - {step: 1, who: operator, action: "Collect the suite/test logs and artifacts for this failure.", est_time_min: 5}
+    - {step: 2, who: escalate, action: "Escalate to Etched engineer with the collected logs.", ticket_template: ETCH}
+  owner: supercomputing-sw
+  doc_url: https://github.com/etched-ai/sw/blob/master/host/system_test/error_codes/doc/SohuSauPllPhaseAlignmentTestCase.md#TH-SOHU-0020
+  since: harness 2026.216
+  suspected_components: [SOHU_CHIP]
+  vendor_error_id: []
+  jira_component: ETCH / MLT
+- error_code: TH-SOHU-0021
+  name: DEFECTIVE_SA_COLUMNS_EXCEED_LIMIT
+  version: 1
+  category: 6  # CATEGORY_HARDWARE
+  severity: 2  # ERROR_ISOLATE
+  quick_action: 9  # QA_ESCALATE
+  component: 1X.SOHU.SA
+  test_cases: [SohuSaScreeningTestCase, SaSortRampupHbmSingleChipTestCase]
+  disposition: FAILED
+  retryable: false
+  max_auto_retry: 0
+  description: >
+    Defective SA column count exceeds the screening limit. Retry is futile for
+    a defect map.
+  probable_causes:
+    - Systolic-array columns defective beyond the screening allowance
+  capture:
+    - suite_run_url
+    - per-test log and transcript
+    - unit_sn, fw_version, harness_version, station_id, operator_id, timestamp
+  repair_actions:
+    - {step: 1, who: operator, action: "Collect the suite/test logs and artifacts for this failure.", est_time_min: 5}
+    - {step: 2, who: escalate, action: "Escalate to Etched engineer with the collected logs.", ticket_template: ETCH}
+  owner: supercomputing-sw
+  doc_url: https://github.com/etched-ai/sw/blob/master/host/system_test/error_codes/doc/SohuSaScreeningTestCase.md#TH-SOHU-0021
+  since: harness 2026.216
+  suspected_components: []
+  vendor_error_id: []
+  jira_component: ETCH / l10-test
+- error_code: TH-SOHU-0022
+  name: PD_CHAIN_READ_FAILURE
+  version: 1
+  category: 6  # CATEGORY_HARDWARE
+  severity: 2  # ERROR_ISOLATE
+  quick_action: 9  # QA_ESCALATE
+  component: 1X.SOHU.PD
+  test_cases: [SohuPdTestCase]
+  disposition: FAILED
+  retryable: false
+  max_auto_retry: 0
+  description: >
+    Process detector (PD) chain read failure.
+  probable_causes:
+    - PD chain access fault
+    - Marginal PD macro
+  capture:
+    - suite_run_url
+    - per-test log and transcript
+    - unit_sn, fw_version, harness_version, station_id, operator_id, timestamp
+  repair_actions:
+    - {step: 1, who: operator, action: "Collect the suite/test logs and artifacts for this failure.", est_time_min: 5}
+    - {step: 2, who: escalate, action: "Escalate to Etched engineer with the collected logs.", ticket_template: ETCH}
+  owner: supercomputing-sw
+  doc_url: https://github.com/etched-ai/sw/blob/master/host/system_test/error_codes/doc/SohuPdTestCase.md#TH-SOHU-0022
+  since: harness 2026.216
+  suspected_components: []
+  vendor_error_id: []
+  jira_component: ETCH / l10-test
+- error_code: TH-SOHU-0023
+  name: CHIP_BIN_BELOW_THRESHOLD
+  version: 1
+  category: 6  # CATEGORY_HARDWARE
+  severity: 2  # ERROR_ISOLATE
+  quick_action: 9  # QA_ESCALATE
+  component: 1X.SOHU.BINNING
+  test_cases: [SohuChipBinTestCase]
+  disposition: FAILED
+  retryable: false
+  max_auto_retry: 0
+  description: >
+    Chip bin below the acceptance threshold / failed the binning criteria
+    (e.g. unbinnable SA column mask count, or illegal bin transition).
+  probable_causes:
+    - Silicon performance below the acceptance bin
+    - More masked SA columns than the supported binning limit
+  capture:
+    - suite_run_url
+    - binning inputs and computed bin for the run
+    - unit_sn, fw_version, harness_version, station_id, operator_id, timestamp
+  repair_actions:
+    - {step: 1, who: operator, action: "Collect the suite/test logs and artifacts for this failure.", est_time_min: 5}
+    - {step: 2, who: escalate, action: "Escalate to Etched engineer with the collected logs.", ticket_template: ETCH}
+  owner: supercomputing-sw
+  doc_url: https://github.com/etched-ai/sw/blob/master/host/system_test/error_codes/doc/SohuChipBinTestCase.md#TH-SOHU-0023
+  since: harness 2026.216
+  suspected_components: [SOHU_ASIC]
+  vendor_error_id: []
+  jira_component: ETCH / MLT
+- error_code: TH-SOHU-0024
+  name: SCREENING_DATA_MISSING
+  version: 1
+  category: 5  # CATEGORY_CONFIG
+  severity: 5  # ERROR_CONFIG
+  quick_action: 9  # QA_ESCALATE
+  component: 1X.SOHU.SCREENING_DATA
+  test_cases: [SohuChipBinTestCase, SohuSaScreeningTestCase, SaSortRampupHbmSingleChipTestCase]
+  disposition: ERROR  # test-input problem; excluded from module yield
+  retryable: false
+  max_auto_retry: 0
+  description: >
+    Required screening data missing or failed to load (SA mask / bin
+    inputs), including eFuse/Flash init-config read failures and invalid
+    screening bin encodings.
+  probable_causes:
+    - Screening data package missing from the station or suite config
+    - SA mask / bin inputs failed to parse
+    - eFuse or Flash init config unreadable or inconsistent
+  capture:
+    - suite_run_url
+    - per-test log and transcript
+    - unit_sn, fw_version, harness_version, station_id, operator_id, timestamp
+  repair_actions:
+    - {step: 1, who: operator, action: "Collect the suite/test logs and artifacts for this failure.", est_time_min: 5}
+    - {step: 2, who: escalate, action: "Escalate to Etched engineer with the collected logs.", ticket_template: ETCH}
+  owner: supercomputing-sw
+  doc_url: https://github.com/etched-ai/sw/blob/master/host/system_test/error_codes/doc/SohuChipBinTestCase.md#TH-SOHU-0024
+  since: harness 2026.216
+  suspected_components: []
+  vendor_error_id: []
+  jira_component: ETCH / MLT
+- error_code: TH-SOHU-0025
+  name: CHIP_STATE_SNAPSHOT_FAILED
+  version: 1
+  category: 6  # CATEGORY_HARDWARE
+  severity: 4  # ERROR_TRIAGE
+  quick_action: 9  # QA_ESCALATE
+  component: 1X.SOHU.SNAPSHOT
+  test_cases: [SohuSnapTestCase]
+  disposition: FAILED
+  retryable: false
+  max_auto_retry: 0
+  description: >
+    Chip state snapshot capture failed.
+  probable_causes:
+    - Chip not responding to the snapshot request
+    - Snapshot tooling fault
+  capture:
+    - suite_run_url
+    - per-test log and transcript
+    - unit_sn, fw_version, harness_version, station_id, operator_id, timestamp
+  repair_actions:
+    - {step: 1, who: operator, action: "Collect the suite/test logs and artifacts for this failure.", est_time_min: 5}
+    - {step: 2, who: escalate, action: "Escalate to Etched engineer with the collected logs.", ticket_template: ETCH}
+  owner: supercomputing-sw
+  doc_url: https://github.com/etched-ai/sw/blob/master/host/system_test/error_codes/doc/SohuSnapTestCase.md#TH-SOHU-0025
+  since: harness 2026.216
+  suspected_components: [SOHU_ASIC]
+  vendor_error_id: []
+  jira_component: ETCH / MLT
+# TH-SOHU-0026 is retired (ETCH-38346): no longer emitted. New PLL glitch
+# frequency readback failures use TH-SOHU-0020 (SAU_PLL_CONFIG_FAIL). Kept
+# so historical harness 2026.216+ results and future codegen can still
+# resolve the allocated identity.
+- error_code: TH-SOHU-0026
+  name: PLL_GLITCH_FREQUENCY_READBACK_FAILED
+  retired: true
+  version: 1
+  category: 6  # CATEGORY_HARDWARE
+  severity: 2  # ERROR_ISOLATE
+  quick_action: 9  # QA_ESCALATE
+  component: 1X.SOHU.PLL
+  test_cases: [SetPllGlitchFreqTestCase]
+  disposition: FAILED
+  retryable: false
+  max_auto_retry: 0
+  description: >
+    RETIRED (ETCH-38346): historically emitted when PLL glitch frequency did
+    not read back within 5% of the target before the timeout. New emissions
+    use TH-SOHU-0020 (SAU_PLL_CONFIG_FAIL).
+  probable_causes:
+    - PLL not locking at the requested glitch frequency
+    - DVFS control path fault
+  capture:
+    - suite_run_url
+    - per-test log and transcript
+    - unit_sn, fw_version, harness_version, station_id, operator_id, timestamp
+  repair_actions:
+    - {step: 1, who: operator, action: "Collect the suite/test logs and artifacts for this failure.", est_time_min: 5}
+    - {step: 2, who: escalate, action: "Escalate to Etched engineer with the collected logs.", ticket_template: ETCH}
+  owner: supercomputing-sw
+  doc_url: https://github.com/etched-ai/sw/blob/master/host/system_test/error_codes/doc/SetPllGlitchFreqTestCase.md#TH-SOHU-0026
+  since: harness 2026.216
+  suspected_components: [SOHU_ASIC]
+  vendor_error_id: []
+  jira_component: ETCH / MLT
+- error_code: TH-SOHU-0027
+  name: VFIO_PING_LATENCY_OUT_OF_SPEC
+  version: 1
+  category: 6  # CATEGORY_HARDWARE
+  severity: 2  # ERROR_ISOLATE
+  quick_action: 9  # QA_ESCALATE
+  component: 1X.SOHU.ASIC
+  test_cases: [SohuVfioPingTestCase]
+  disposition: FAILED
+  retryable: false
+  max_auto_retry: 0
+  description: >
+    VFIO ping responses were received but none met the allowed latency
+    (latency_allowed_us) - the device is pingable but its response latency
+    is out of spec. Distinct from TH-SOHU-0002 (no response at all).
+  probable_causes:
+    - Marginal PCIe link or device response path adding latency
+    - Device under unexpected load or in a degraded state
+  capture:
+    - suite_run_url
+    - per-ping latency results from the test log
+    - configured latency_allowed_us
+    - unit_sn, fw_version, harness_version, station_id, operator_id, timestamp
+  repair_actions:
+    - {step: 1, who: operator, action: "Collect the suite/test logs and artifacts for this failure.", est_time_min: 5}
+    - {step: 2, who: escalate, action: "Escalate to Etched engineer with the collected logs.", ticket_template: ETCH}
+  owner: supercomputing-sw
+  doc_url: https://github.com/etched-ai/sw/blob/master/host/system_test/error_codes/doc/SohuVfioPingTestCase.md#TH-SOHU-0027
+  since: harness 2026.216
+  suspected_components: [SOHU_ASIC]
+  vendor_error_id: []
+  jira_component: ETCH / l10-test
+
+# TH-THM-0001 identity is pre-allocated in the legacy _Etched Error Code
+# sheet (1X Module Test tab): keep it verbatim. Its packed form equals
+# TH-CPU-0001's (spec §2.2 does not encode the subsystem); join on the
+# identity segments, never on packed alone.
+- error_code: TH-THM-0001
+  name: THERMAL_READING_OUT_OF_RANGE
+  version: 1
+  category: 6  # CATEGORY_HARDWARE
+  severity: 2  # ERROR_ISOLATE
+  quick_action: 6  # QA_RETRY, falls back to QA 9 on budget exhaustion
+  component: MLT.THM.SOHU_CHIP  # 1X Module Test (MLT) station
+  test_cases: [SohuThermalDiodeTestCase, SohuDtsTestCase]
+  disposition: FAILED
+  retryable: true
+  max_auto_retry: 1
+  description: >
+    Thermal diode temperature reading out of the qualified range, reported
+    invalid by the sensor, or an uncalibrated mezzanine diode reading below
+    0 C (bad solder joint indicator). Failing channels go in the message /
+    affected_instances, never into new codes (spec §1.2).
+  probable_causes:
+    - Thermal forcing head not seated / poor contact
+    - Bad solder joint on an uncalibrated mezzanine diode channel
+    - Faulty TMP464 sensor or ASIC remote diode
+    - Station ambient out of spec
+  capture:
+    - suite_run_url
+    - per-channel temperatures and validity flags (recorded measurements)
+    - configured min/max bounds
+    - unit_sn, fw_version, harness_version, station_id, operator_id, timestamp
+  repair_actions:
+    - {step: 1, who: operator, action: "Inspect the IBC TIM and ensure that the Sohu module is properly seated and secured in the fixture.", est_time_min: 5}
+    - {step: 2, who: operator, action: "Also verify that the Sohu module top cold plate is connected to the HRM cooling loop.", est_time_min: 5}
+    - {step: 3, who: operator, action: "If there is no trouble found, retest once.", retest: affected_subset, est_time_min: 10}
+  owner: supercomputing-sw
+  doc_url: https://github.com/etched-ai/sw/blob/master/host/system_test/error_codes/doc/SohuThermalDiodeTestCase.md#TH-THM-0001
+  since: harness 2026.216
+  suspected_components: [MEZZ_MODULE, THERMAL_HEAD, SOHU_CHIP]
+  vendor_error_id: []
+  jira_component: ETCH / l10-test
+- error_code: TH-THM-0002
+  name: DTS_SENSOR_VARIATION_EXCEEDED
+  version: 1
+  category: 6  # CATEGORY_HARDWARE
+  severity: 2  # ERROR_ISOLATE
+  quick_action: 6  # QA_RETRY
+  component: 1X.THM.DTS
+  test_cases: [SohuDtsTestCase]
+  disposition: FAILED
+  retryable: true
+  max_auto_retry: 3
+  description: >
+    The peak-to-peak spread across the usable Sohu DTS readings exceeded the
+    configured deviation limit (20C at L10). Zeroed and faulted sensors are
+    excluded from the spread, so this reflects real sensor-to-sensor variation.
+  probable_causes:
+    - Uneven thermal forcing head seating across the die
+    - TIM voids or uneven bond line
+    - Defective DTS sensor reading high or low while still reporting no fault
+  capture:
+    - suite_run_url
+    - per-sensor converted readings and the computed peak_to_peak value
+    - configured deviation limit for the run
+    - unit_sn, fw_version, harness_version, station_id, operator_id, timestamp
+  repair_actions:
+    - {step: 1, who: operator, action: "Inspect the IBC TIM and ensure that the Sohu module is properly seated and secured in the fixture.", est_time_min: 5}
+    - {step: 2, who: operator, action: "Also verify that the Sohu module top cold plate is connected to the HRM cooling loop.", est_time_min: 5}
+    - {step: 3, who: operator, action: "If there is no trouble found, retest once.", retest: affected_subset, est_time_min: 10}
+  owner: supercomputing-sw
+  doc_url: https://github.com/etched-ai/sw/blob/master/host/system_test/error_codes/doc/SohuDtsTestCase.md#TH-THM-0002
+  since: harness 2026.216
+  suspected_components: [SOHU_ASIC, THERMAL_HEAD, TIM]
+  vendor_error_id: []
+  jira_component: ETCH / l10-test
+
+# Safety-protection path failure: the CTS is the last line of defence against
+# a thermal runaway, so the unit is preserved for FA instead of retried,
+# even though the code's category is HARDWARE.
+- error_code: TH-THM-0003
+  name: CTS_PROTECTION_NO_SHUTDOWN
+  version: 1
+  category: 6  # CATEGORY_HARDWARE
+  severity: 2  # ERROR_ISOLATE
+  quick_action: 9  # QA_ESCALATE
+  component: 1X.THM.CTS
+  test_cases: [SohuCtsTestCase]
+  disposition: FAILED
+  retryable: false
+  max_auto_retry: 0
+  description: >
+    The CTS trim code was driven to its maximum (lowest trip threshold) but
+    the chip did not shut down: the CPLD cattrip latch bit in ASIC_CTRL1 was
+    never set within the shutdown timeout.
+  probable_causes:
+    - Defective catastrophic trip sensor on the die (never asserts CATTRIP)
+    - CATTRIP output pin or its mezzanine card trace open
+    - CATTRIP masked on the mezzanine card CPLD (mcu_cattrip_mask misconfigured)
+  capture:
+    - suite_run_url
+    - CPLD register dump (ASIC_CTRL1, man_mcu_cattrip, mcu_cattrip_mask) from the run
+    - cpld_asic_ctrl1 and cattrip_latched measurements
+    - VBB serial transcript for the trigger and poll window
+    - unit_sn, fw_version, harness_version, station_id, operator_id, timestamp
+  repair_actions:
+    - {step: 1, who: operator, action: "Collect the suite/test logs and artifacts for this failure.", est_time_min: 5}
+    - {step: 2, who: escalate, action: "Escalate to Etched engineer with the collected logs.", ticket_template: ETCH}
+  owner: supercomputing-sw
+  doc_url: https://github.com/etched-ai/sw/blob/master/host/system_test/error_codes/doc/SohuCtsTestCase.md#TH-THM-0003
+  since: harness 2026.216
+  suspected_components: [SOHU_ASIC, MEZZANINE_CARD]
+  vendor_error_id: []
+  jira_component: ETCH / l10-test
+- error_code: TH-THM-0004
+  name: CATASTROPHIC_TRIP_DURING_STRESS
+  version: 1
+  category: 6  # CATEGORY_HARDWARE
+  severity: 2  # ERROR_ISOLATE
+  quick_action: 6  # QA_RETRY
+  component: 1X.THM.TRIP
+  test_cases: [SohuPowerVirusThermalTestCase]
+  disposition: FAILED
+  retryable: true
+  max_auto_retry: 3
+  description: >
+    Catastrophic trip event during a stress workload.
+  probable_causes:
+    - Thermal excursion under power virus
+    - TIM or cold-plate contact degradation
+  capture:
+    - suite_run_url
+    - per-test log and transcript
+    - unit_sn, fw_version, harness_version, station_id, operator_id, timestamp
+  repair_actions:
+    - {step: 1, who: operator, action: "Inspect the IBC TIM and ensure that the Sohu module is properly seated and secured in the fixture.", est_time_min: 5}
+    - {step: 2, who: operator, action: "Also verify that the Sohu module top cold plate is connected to the HRM cooling loop.", est_time_min: 5}
+    - {step: 3, who: operator, action: "If there is no trouble found, retest once.", retest: affected_subset, est_time_min: 10}
+  owner: supercomputing-sw
+  doc_url: https://github.com/etched-ai/sw/blob/master/host/system_test/error_codes/doc/SohuPowerVirusThermalTestCase.md#TH-THM-0004
+  since: harness 2026.216
+  suspected_components: []
+  vendor_error_id: []
+  jira_component: ETCH / l10-test
+- error_code: TH-THM-0005
+  name: DTS_PTP_DEVIATION_OUT_OF_BOUNDS
+  version: 1
+  category: 6  # CATEGORY_HARDWARE
+  severity: 4  # ERROR_TRIAGE
+  quick_action: 9  # QA_ESCALATE
+  component: 1X.THM.DTS
+  test_cases: [SohuDtsTestCase, SohuPowerVirusTestCase]
+  disposition: FAILED
+  retryable: false
+  max_auto_retry: 0
+  description: >
+    DTS peak-to-peak deviation under power virus out of bounds (threshold
+    under review; bounds may be raised).
+  probable_causes:
+    - TIM or thermal head contact variation
+    - Threshold still under review
+    - The TIM baking duration has been updated from 15 to 45 mins.
+  capture:
+    - suite_run_url
+    - per-test log and transcript
+    - unit_sn, fw_version, harness_version, station_id, operator_id, timestamp
+  repair_actions:
+    - {step: 1, who: operator, action: "If any temperature reading is out of spec verify that the affected unit has completed the required 45-min TIM baking process.", est_time_min: 5}
+    - {step: 2, who: operator, action: "Collect the suite/test logs and artifacts for this failure.", est_time_min: 5}
+    - {step: 3, who: escalate, action: "Escalate to Etched engineer with the collected logs.", ticket_template: ETCH}
+  owner: supercomputing-sw
+  doc_url: https://github.com/etched-ai/sw/blob/master/host/system_test/error_codes/doc/SohuDtsTestCase.md#TH-THM-0005
+  since: harness 2026.216
+  suspected_components: []
+  vendor_error_id: []
+  jira_component: ETCH / l10-test
+- error_code: TH-THM-0006
+  name: DTS_PEAK_TEMPERATURE_EXCEEDS_MAX
+  version: 1
+  category: 6  # CATEGORY_HARDWARE
+  severity: 2  # ERROR_ISOLATE
+  quick_action: 9  # QA_ESCALATE
+  component: 1X.THM.DTS
+  test_cases: [SohuPowerVirusThermalTestCase]
+  disposition: FAILED
+  retryable: false
+  max_auto_retry: 0
+  description: >
+    Peak DTS temperature under power virus exceeds the expected maximum.
+  probable_causes:
+    - Unit did not complete the required 45-minute TIM baking process
+    - TIM or cold-plate contact degradation
+    - The TIM baking duration has been updated from 15 to 45 mins.
+  capture:
+    - suite_run_url
+    - thermal telemetry for the run
+    - unit_sn, fw_version, harness_version, station_id, operator_id, timestamp
+  repair_actions:
+    - {step: 1, who: operator, action: "If any temperature reading is out of spec verify that the affected unit has completed the required 45-min TIM baking process.", est_time_min: 5}
+    - {step: 2, who: operator, action: "Collect the suite/test logs and artifacts for this failure.", est_time_min: 5}
+    - {step: 3, who: escalate, action: "Escalate to Etched engineer with the collected logs.", ticket_template: ETCH}
+  owner: supercomputing-sw
+  doc_url: https://github.com/etched-ai/sw/blob/master/host/system_test/error_codes/doc/SohuPowerVirusThermalTestCase.md#TH-THM-0006
+  since: harness 2026.216
+  suspected_components: [SOHU_ASIC, TIM]
+  vendor_error_id: []
+  jira_component: ETCH / l10-test
+
+# Thermal telemetry could not be read at all, so the chip's thermal state
+# is unknown rather than bad.
+- error_code: TH-THM-0007
+  name: THERMAL_TELEMETRY_UNAVAILABLE
+  version: 1
+  category: 7  # CATEGORY_SOFTWARE — telemetry integrity, not a device verdict
+  severity: 4  # ERROR_TRIAGE
+  quick_action: 9  # QA_ESCALATE
+  component: MLT.THM.SOHU_CHIP
+  test_cases: [SohuThermalDiodeTestCase]
+  disposition: ERROR  # cannot conclude a DUT failure from unreadable telemetry
+  retryable: false
+  max_auto_retry: 0
+  description: >
+    The TMP464 thermal diode data could not be obtained - RPC/connection
+    failure over the VBB UART, or a malformed response (missing temperature
+    array, unexpected channel count). The thermal verdict is inconclusive.
+  probable_causes:
+    - VBB UART/RPC communication failure (shared bench UART contention)
+    - VBB or sensor firmware fault returning malformed TMP464 data
+  capture:
+    - suite_run_url
+    - the RPC error or malformed response from the per-test log
+    - unit_sn, fw_version, harness_version, station_id, timestamp
+  repair_actions:
+    - {step: 1, who: operator, action: "Collect the suite/test logs and artifacts for this failure.", est_time_min: 5}
+    - {step: 2, who: escalate, action: "Escalate to Etched engineer with the collected logs.", ticket_template: ETCH}
+  owner: supercomputing-sw
+  doc_url: https://github.com/etched-ai/sw/blob/master/host/system_test/error_codes/doc/SohuThermalDiodeTestCase.md#TH-THM-0007
+  since: harness 2026.216
+  suspected_components: []
+  vendor_error_id: []
+  jira_component: ETCH / l10-test
