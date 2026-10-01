@@ -216,3 +216,6 @@ __marimo__/
 
 # Streamlit
 .streamlit/secrets.toml
+
+# Local-only docs; kept on disk, not published
+sw_errorcodes_doc/
