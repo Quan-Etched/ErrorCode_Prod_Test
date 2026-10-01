@@ -1,728 +1,1293 @@
 #!/usr/bin/env python3
-"""Generate index.html for etched-ai/32x-error-code.
+"""Rebuild the 32x-error-code tables from host/system_test/error_codes.
 
-Sources
--------
-1. Google Sheet "_Etched Error Code"
-   https://docs.google.com/spreadsheets/d/1zKcxEXyYFLAQkI0AnVtZnSQ7Z-sxGqzGBpc9-0qhrqk
-2. Slack #error-code-define (C0B299EA7UK)
-3. Source of truth: etched-ai/sw host/system_test/error_codes/th_registry.yaml
+The published snapshot in 32x-error-code was driven by an old sheet export
+plus one th_registry.yaml. The source of truth is now four registries:
 
-Field naming and enum values follow th_registry.yaml (TH Error Code
-Specification v0.3 GBP7, GBP11.1).
+- th_registry.yaml          (1X, being drained)
+- MLT/mlt_th_registry.yaml  (chip / module)
+- L10/l10_th_registry.yaml  (L10 server)
+- common_th_registry.yaml   (cross-station)
+
+Codes are emitted once per owning catalog. A 1X record is included only when
+its identity is not already in MLT, L10, or common. L11 stays the spreadsheet
+draft: system_test has no L11 registry.
+
+Also writes error_code_update_comparison.csv against the previous joined
+tables in 32x-error-code/data.
 """
-import csv, html, os, re, sys, yaml
+
+import csv
+import html
+import os
+import re
+import shutil
+import subprocess
+
+import yaml
 
 HERE = os.path.dirname(os.path.abspath(__file__))
-SHEET = os.path.join(HERE, 'sheet.md')
-REGISTRY = os.path.join(HERE, 'th_registry.yaml')
-OUT = os.path.join(HERE, 'index.html')
-XLSX = os.path.join(HERE, 'etched_error_code.xlsx')            # verbatim mirror
-ANNOTATED = os.path.join(HERE, 'etched_error_code_annotated.xlsx')  # joined view
-XLSX_NAME = os.path.basename(XLSX)
-ANNOTATED_NAME = os.path.basename(ANNOTATED)
-DATA_DIR = os.path.join(HERE, 'data')
-SRC_DIR = os.path.join(DATA_DIR, 'source')
+SW = os.path.abspath(os.path.join(HERE, "..", "..", "Etched_SW", "sw"))
+# Pinned relative to this folder's sibling layout: Error_Code/ and Etched_SW/.
+# Fall back to the snapshots already in this repo when that layout is absent.
+SW_CODES = os.path.join(SW, "host", "system_test", "error_codes")
+if not os.path.isdir(SW_CODES):
+    SW_CODES = HERE
+OLD_CANDIDATES = [
+    os.path.abspath(os.path.join(HERE, "..", "32x-error-code")),
+    os.path.abspath(os.path.join(HERE, "..", "Error_Code", "32x-error-code")),
+]
+OLD = next((path for path in OLD_CANDIDATES if os.path.isdir(path)), HERE)
 
-# Best-effort tab names: the Drive markdown export carries no tab names, so the
-# seven contiguous grids it emits are named after their content, in source
-# order. Renaming a tab here is the only edit needed if the originals differ.
-SOURCE_TABS = ['Revision History', 'MLT 1X', 'L10', 'L11',
-               'Field Definitions', 'DRI Ownership', 'Suite Run Log']
+REGISTRY_FILES = {
+    "1x": os.path.join(SW_CODES, "th_registry.yaml"),
+    "mlt": os.path.join(SW_CODES, "MLT", "mlt_th_registry.yaml"),
+    "l10": os.path.join(SW_CODES, "L10", "l10_th_registry.yaml"),
+    "common": os.path.join(SW_CODES, "common_th_registry.yaml"),
+}
 
-# ------------------------------------------------------------------ identity
-REPO_VERSION = '0.1'          # version of this repo / published page
-REPO_URL = 'https://github.com/etched-ai/32x-error-code'
-PAGES_URL = 'https://fantastic-telegram-38n6vyw.pages.github.io/'
-SHEET_URL = ('https://docs.google.com/spreadsheets/d/'
-             '1zKcxEXyYFLAQkI0AnVtZnSQ7Z-sxGqzGBpc9-0qhrqk/edit?gid=1353335746')
-REGISTRY_URL = ('https://github.com/etched-ai/sw/blob/master/host/system_test/'
-                'error_codes/th_registry.yaml')
-SLACK_CHANNEL = '#error-code-define'
-SLACK_URL = 'https://etchedai.slack.com/archives/C0B299EA7UK'
-SLACK_CHANNEL_2 = '#tiger-error-code'
-SLACK_URL_2 = 'https://etchedai.slack.com/archives/C0BMBRF327R'
+STAGE = {
+    "mlt": "MLT / 1X Module Test",
+    "l10": "L10 Test",
+    "common": "Common",
+    "l11": "L11 Test",
+    "1x": "MLT / 1X Module Test",
+}
 
-# ---------------------------------------------------------------- enum legends
-# Straight from th_registry.yaml inline comments.
-CATEGORY = {0: 'CATEGORY_NONE', 1: 'CATEGORY_NETWORK', 3: 'CATEGORY_MEMORY',
-            5: 'CATEGORY_CONFIG', 6: 'CATEGORY_HARDWARE', 7: 'CATEGORY_SOFTWARE',
-            11: 'CATEGORY_DATA'}
-SEVERITY = {2: 'ERROR_ISOLATE', 3: 'ERROR_UNKNOWN', 4: 'ERROR_TRIAGE',
-            5: 'ERROR_CONFIG'}
-QUICK_ACTION = {0: 'QA_NO_ACT', 1: 'QA_COLD_REBOOT', 2: 'QA_WARM_REBOOT',
-                3: 'QA_SOFT_POWER_OFF', 4: 'QA_HARD_SHUTDOWN',
-                5: 'QA_DISABLE_COMPONENT', 6: 'QA_RETRY', 7: 'QA_HOT_REMOVE',
-                8: 'QA_HOT_SWITCH', 9: 'QA_ESCALATE'}
+CATEGORY = {
+    0: "CATEGORY_NONE",
+    1: "CATEGORY_NETWORK",
+    2: "CATEGORY_STORAGE",
+    3: "CATEGORY_MEMORY",
+    4: "CATEGORY_AUTH",
+    5: "CATEGORY_CONFIG",
+    6: "CATEGORY_HARDWARE",
+    7: "CATEGORY_SOFTWARE",
+    8: "CATEGORY_API",
+    9: "CATEGORY_RESOURCE",
+    10: "CATEGORY_SECURITY",
+    11: "CATEGORY_DATA",
+    12: "CATEGORY_INTERNAL",
+}
+SEVERITY = {
+    0: "ERROR_NONE",
+    1: "ERROR_MONITOR",
+    2: "ERROR_ISOLATE",
+    3: "ERROR_UNKNOWN",
+    4: "ERROR_TRIAGE",
+    5: "ERROR_CONFIG",
+    6: "ERROR_RESET",
+}
+QUICK_ACTION = {
+    0: "QA_NO_ACT",
+    1: "QA_COLD_REBOOT",
+    2: "QA_WARM_REBOOT",
+    3: "QA_SOFT_POWER_OFF",
+    4: "QA_HARD_SHUTDOWN",
+    5: "QA_DISABLE_COMPONENT",
+    6: "QA_RETRY",
+    7: "QA_HOT_REMOVE",
+    8: "QA_HOT_SWITCH",
+    9: "QA_ESCALATE",
+}
 
-# --------------------------------------------------------------- sheet parsing
-ESCAPED = re.compile(r'\\([_#~*`|<>\[\]().!\-])')
+SUFFIX = re.compile(r"^(TH-[A-Z0-9]+-\d+)(?:-S(\d)Q(\d))?$")
+SPEC_AUTHOR = "Ulysses Kao"
+DOC_REV_NEW = "0.4"
 
-def unmd(cell):
-    return ESCAPED.sub(r'\1', cell).strip()
+JOINED_COLS = [
+    "Error Code ID",
+    "Packed",
+    "Version",
+    "Doc Rev",
+    "Original Author",
+    "Author Basis",
+    "DRI 2",
+    "Name",
+    "Message",
+    "Severity",
+    "Severity Name",
+    "Quick Action",
+    "Quick Action Name",
+    "Quick Action (sheet)",
+    "Recover / Troubleshooting Procedure",
+    "Error Type",
+    "Category",
+    "Category Name",
+    "Component",
+    "Test Case",
+    "Source",
+    "Possible Root Cause",
+    "Bugs",
+    "Owner",
+    "Since",
+    "Disposition",
+    "Retryable",
+    "In th_registry.yaml",
+    "Merged Duplicate",
+    "Doc URL",
+]
 
-def blocks(path):
-    out, cur = [], []
-    for line in open(path).read().split('\n'):
-        if not line.strip():
-            if cur:
-                out.append(cur); cur = []
-            continue
-        if ':-:' in line:
-            continue
-        cur.append([unmd(c) for c in line.strip().strip('|').split('|')])
-    if cur:
-        out.append(cur)
-    return out
+DIFF_FIELDS = [
+    "full_id",
+    "name",
+    "message",
+    "severity",
+    "quick_action",
+    "category",
+    "component",
+    "test_cases",
+    "disposition",
+    "retryable",
+    "owner",
+    "since",
+    "doc_url",
+    "version",
+    "packed",
+    "procedure",
+    "registry_status",
+]
 
-def table(block):
-    """First row with >=2 non-empty cells is the header; rest are records."""
-    hdr_i = next(i for i, r in enumerate(block) if sum(bool(c) for c in r) >= 2)
-    hdr = block[hdr_i]
-    rows = []
-    for r in block[hdr_i + 1:]:
-        if not any(r):
-            continue
-        rows.append({hdr[i] if i < len(hdr) and hdr[i] else f'col{i}': (r[i] if i < len(r) else '')
-                     for i in range(max(len(hdr), len(r)))})
-    return hdr, rows
 
-BL = blocks(SHEET)
-revisions      = table(BL[0])[1]   # Version | Comment | Author
-mlt_rows       = table(BL[1])[1]   # 1X Module Test / MLT
-l10_rows       = table(BL[2])[1]   # L10 Test (has Packed + Name)
-l11_rows       = table(BL[3])[1]   # L11 Test (EC-* numeric space)
-field_defs     = table(BL[4])[1]   # Field | Describe  (+ Error ID bitfield rows)
-dri_rows       = table(BL[5])[1]   # test case | DRI 1 | DRI 2 | comment | PR
+def norm(value):
+    return " ".join(str(value or "").split())
 
-# The Error-ID bitfield legend is appended to the field-definition block.
-field_defs = [r for r in field_defs if r.get('Field') and r.get('Describe')]
-bitfield = [r for r in table(BL[4])[1] if r.get('Field') in ('Char #', 'Describe', 'Define')
-            and r.get('col2')]
 
-# ------------------------------------------------------------ DRI / authorship
-DRI = {}
-for r in dri_rows:
-    tc = r.get('col0', '').strip()
-    if not tc or tc == 'DRI Members' or r.get('DRI 1', '') == '':
-        continue
-    DRI[tc] = {'dri1': r.get('DRI 1', '').strip(),
-               'dri2': r.get('DRI 2', '').strip(),
-               'status': r.get('comment', '').strip(),
-               'pr': r.get('PR', '').strip()}
+def parse_id(code):
+    code = (code or "").strip()
+    match = SUFFIX.match(code)
+    if not match:
+        return code, None, None
+    severity = int(match.group(2)) if match.group(2) else None
+    quick = int(match.group(3)) if match.group(3) else None
+    return match.group(1), severity, quick
 
-SPEC_AUTHOR = revisions[0]['Author'] if revisions else 'Ulysses Kao'
 
-def split_cases(s):
-    return [c.strip() for c in re.split(r'[,;]', s or '') if c.strip()]
+def packed_of(base, category, severity, quick_action):
+    sequence = int(base.rsplit("-", 1)[1])
+    return (
+        (0x1 << 28)
+        | (int(category) << 24)
+        | (int(severity) << 20)
+        | (int(quick_action) << 16)
+        | sequence
+    )
 
-def author_for(test_cases):
-    """Original author = DRI 1 of the first test case that has one listed
-    (DRI tab of the sheet); otherwise the spec author who drafted the code."""
-    for tc in test_cases:
-        if tc in DRI and DRI[tc]['dri1']:
-            return DRI[tc]['dri1'], f'DRI 1 of {tc}'
-        base = tc if tc.endswith('TestCase') else tc + 'TestCase'
-        if base in DRI and DRI[base]['dri1']:
-            return DRI[base]['dri1'], f'DRI 1 of {base}'
-    return SPEC_AUTHOR, 'spec author (no DRI listed)'
 
-# ------------------------------------------------------------------- registry
-reg = {}
-for e in yaml.safe_load(open(REGISTRY)):
-    reg[e['error_code']] = e
+def load_yaml(path):
+    with open(path, encoding="utf-8") as handle:
+        return yaml.safe_load(handle)
 
-SUFFIX = re.compile(r'^(TH-[A-Z0-9]+-\d+)(?:-S(\d)Q(\d))?$')
 
-def base_and_flags(code):
-    m = SUFFIX.match(code.strip())
-    if not m:
-        return code.strip(), None, None
-    return m.group(1), (int(m.group(2)) if m.group(2) else None), \
-           (int(m.group(3)) if m.group(3) else None)
+def sw_sha():
+    if SW_CODES == HERE:
+        return "local"
+    try:
+        return subprocess.check_output(
+            ["git", "rev-parse", "--short=12", "HEAD"],
+            cwd=SW,
+            text=True,
+        ).strip()
+    except (OSError, subprocess.CalledProcessError):
+        return "unknown"
 
-def enrich(sheet_row, code_field, doc_rev, stage):
-    code = sheet_row.get(code_field, '').strip()
-    if not code:
-        return None
-    base, sev, qa = base_and_flags(code)
-    e = reg.get(base, {})
-    cases = split_cases(sheet_row.get('Test_Case', ''))
-    if not cases and e.get('test_cases'):
-        cases = list(e['test_cases'])
-    author, basis = author_for(cases)
-    if sev is None:
-        sev = e.get('severity')
-    if qa is None:
-        qa = e.get('quick_action')
-    desc = sheet_row.get('Message', '') or ' '.join((e.get('description') or '').split())
+
+def copy_file(src, dst):
+    if os.path.normcase(os.path.abspath(src)) == os.path.normcase(os.path.abspath(dst)):
+        return
+    os.makedirs(os.path.dirname(dst), exist_ok=True)
+    shutil.copy(src, dst)
+
+
+def load_dri():
+    path = os.path.join(OLD, "data", "dri_ownership.csv")
+    dri = {}
+    with open(path, newline="", encoding="utf-8-sig") as handle:
+        for row in csv.DictReader(handle):
+            name = (row.get("Test Case") or "").strip()
+            if name:
+                dri[name] = row
+    return dri
+
+
+def author_for(test_cases, dri):
+    for test_case in test_cases:
+        hit = dri.get(test_case) or dri.get(
+            test_case if test_case.endswith("TestCase") else test_case + "TestCase"
+        )
+        if hit and (hit.get("DRI 1") or "").strip():
+            return hit["DRI 1"].strip(), f"DRI 1 of {test_case}"
+    return SPEC_AUTHOR, "spec author (no DRI listed)"
+
+
+def procedure_of(entry):
+    parts = []
+    for action in entry.get("repair_actions") or []:
+        if isinstance(action, dict):
+            text = action.get("action") or ""
+        else:
+            text = str(action)
+        text = norm(text)
+        if text:
+            parts.append(text)
+    return " ".join(parts)
+
+
+def causes_of(entry):
+    return " | ".join(norm(item) for item in (entry.get("probable_causes") or []) if norm(item))
+
+
+def from_entry(entry, catalog, stage):
+    base = entry["error_code"].strip()
+    severity = int(entry["severity"])
+    quick = int(entry["quick_action"])
+    category = int(entry["category"])
+    cases = [str(item).strip() for item in (entry.get("test_cases") or []) if str(item).strip()]
     return {
-        'code': code, 'base': base, 'stage': stage,
-        'name': sheet_row.get('Name', '') or e.get('name', ''),
-        'packed': sheet_row.get('Packed', ''),
-        'version': e.get('version', 1),
-        'doc_rev': doc_rev,
-        'author': author, 'author_basis': basis,
-        'dri2': (DRI.get(cases[0], {}) or {}).get('dri2', '') if cases else '',
-        'message': desc,
-        'quick_action_txt': sheet_row.get('Quick_Action', ''),
-        'procedure': sheet_row.get('Troubleshooting Procedure', '') or sheet_row.get('Recover_Step', ''),
-        'source': sheet_row.get('Source', ''),
-        'error_type': sheet_row.get('Error_Type', '') or CATEGORY.get(e.get('category'), ''),
-        'category': e.get('category'), 'severity': sev, 'qa': qa,
-        'component': sheet_row.get('Component', '') or e.get('component', ''),
-        'test_cases': cases,
-        'root_cause': sheet_row.get('Possible Root cause', ''),
-        'bugs': sheet_row.get('Bugs', ''),
-        'owner': e.get('owner', ''), 'since': e.get('since', ''),
-        'doc_url': e.get('doc_url', ''),
-        'disposition': e.get('disposition', ''),
-        'retryable': e.get('retryable'),
-        'in_registry': base in reg,
-        'probable_causes': e.get('probable_causes') or [],
+        "catalog": catalog,
+        "stage": stage,
+        "base": base,
+        "full_id": f"{base}-S{severity}Q{quick}",
+        "name": entry.get("name") or "",
+        "message": norm(entry.get("description") or ""),
+        "severity": severity,
+        "quick_action": quick,
+        "category": category,
+        "component": entry.get("component") or "",
+        "test_cases": cases,
+        "disposition": entry.get("disposition") or "",
+        "retryable": bool(entry.get("retryable")),
+        "owner": entry.get("owner") or "",
+        "since": entry.get("since") or "",
+        "doc_url": entry.get("doc_url") or "",
+        "version": entry.get("version", 1),
+        "packed": packed_of(base, category, severity, quick),
+        "procedure": procedure_of(entry),
+        "probable_causes": causes_of(entry),
+        "retired": bool(entry.get("retired")),
+        "in_registry": True,
     }
 
-COLLISIONS = []
 
-def collect(rows, code_field, doc_rev, stage):
-    """Collect a stage's codes, de-duplicating repeated Error Code IDs.
+def load_new():
+    catalogs = {name: load_yaml(path) for name, path in REGISTRY_FILES.items()}
+    owned = set()
+    for name in ("mlt", "l10", "common"):
+        owned.update(entry["error_code"] for entry in catalogs[name])
+    rows = []
+    for catalog in ("mlt", "l10", "common"):
+        for entry in catalogs[catalog]:
+            rows.append(from_entry(entry, catalog, STAGE[catalog]))
+    for entry in catalogs["1x"]:
+        if entry["error_code"] not in owned:
+            rows.append(from_entry(entry, "1x", STAGE["1x"]))
+    return rows
 
-    The sheet lists a handful of codes twice inside one stage block (an older
-    short-form row plus a later expanded row). Identity segments are immutable,
-    so a repeat is the same code: keep the row carrying the most detail and
-    record the collision so it is reported rather than silently dropped.
-    """
-    seen = {}
-    for r in rows:
-        rec = enrich(r, code_field, doc_rev, stage)
-        if not rec:
-            continue
-        prev = seen.get(rec['code'])
-        if prev is None:
-            seen[rec['code']] = rec
-            continue
-        detail = lambda x: len(x['message']) + len(x['procedure']) + len(x['test_cases'])
-        keep, drop = (rec, prev) if detail(rec) > detail(prev) else (prev, rec)
-        seen[rec['code']] = keep
-        keep['dup'] = True
-        COLLISIONS.append({'stage': stage, 'code': rec['code'],
-                           'kept': keep['quick_action_txt'] or '(blank)',
-                           'dropped': drop['quick_action_txt'] or '(blank)',
-                           'dropped_msg': drop['message'],
-                           'dropped_cases': ', '.join(drop['test_cases'])})
-    out = list(seen.values())
-    out.sort(key=lambda x: (re.sub(r'\d+', lambda m: m.group().zfill(6), x['code'])))
+
+def load_old_codes():
+    rows = []
+    for filename, stage in (
+        ("mlt_1x.csv", STAGE["mlt"]),
+        ("l10.csv", STAGE["l10"]),
+        ("l11.csv", STAGE["l11"]),
+    ):
+        path = os.path.join(OLD, "data", filename)
+        with open(path, newline="", encoding="utf-8-sig") as handle:
+            for raw in csv.DictReader(handle):
+                full = (raw.get("Error Code ID") or "").strip()
+                if not full:
+                    continue
+                base, severity, quick = parse_id(full)
+                if severity is None and (raw.get("Severity") or "").strip().isdigit():
+                    severity = int(raw["Severity"])
+                if quick is None and (raw.get("Quick Action") or "").strip().isdigit():
+                    quick = int(raw["Quick Action"])
+                packed = (raw.get("Packed") or "").strip()
+                cases = [
+                    part.strip()
+                    for part in (raw.get("Test Case") or "").split(",")
+                    if part.strip()
+                ]
+                rows.append(
+                    {
+                        "stage": stage,
+                        "base": base,
+                        "full_id": full,
+                        "name": raw.get("Name") or "",
+                        "message": norm(raw.get("Message") or ""),
+                        "severity": severity,
+                        "quick_action": quick,
+                        "category": int(raw["Category"])
+                        if (raw.get("Category") or "").strip().isdigit()
+                        else None,
+                        "component": raw.get("Component") or "",
+                        "test_cases": cases,
+                        "disposition": raw.get("Disposition") or "",
+                        "retryable": (raw.get("Retryable") or "").strip(),
+                        "owner": raw.get("Owner") or "",
+                        "since": raw.get("Since") or "",
+                        "doc_url": raw.get("Doc URL") or "",
+                        "version": raw.get("Version") or "",
+                        "packed": int(packed) if packed.isdigit() else None,
+                        "procedure": norm(
+                            raw.get("Recover / Troubleshooting Procedure") or ""
+                        ),
+                        "in_registry": (raw.get("In th_registry.yaml") or "").strip().lower()
+                        == "yes",
+                        "doc_rev": raw.get("Doc Rev") or "",
+                        "author": raw.get("Original Author") or "",
+                        "author_basis": raw.get("Author Basis") or "",
+                        "bugs": raw.get("Bugs") or "",
+                        "error_type": raw.get("Error Type") or "",
+                        "root_cause": raw.get("Possible Root Cause") or "",
+                        "quick_action_txt": raw.get("Quick Action (sheet)") or "",
+                        "dri2": raw.get("DRI 2") or "",
+                        "source": raw.get("Source") or "",
+                    }
+                )
+    return rows
+
+
+def index_by_stage(rows):
+    out = {}
+    for row in rows:
+        out[(row["stage"], row["base"])] = row
     return out
 
-# doc_rev = the sheet revision that introduced each stage's block (revision tab)
-mlt = collect(mlt_rows, 'Error Code ID', '0.2', 'MLT / 1X Module Test')
-l10 = collect(l10_rows, 'Error Code ID', '0.3', 'L10 Test')
-l11 = collect(l11_rows, 'Error Code ID', '0.3', 'L11 Test')
 
-# ------------------------------------------------------------------- rendering
-def esc(x):
-    return html.escape(str(x if x is not None else ''))
+def stages_for(rows):
+    found = {}
+    for row in rows:
+        found.setdefault(row["base"], {})[row["stage"]] = row
+    return found
 
-def cases_html(cases):
+
+def same_text(left, right):
+    return norm(left) == norm(right)
+
+
+def cases_key(cases):
+    return tuple(sorted(cases))
+
+
+def field_changes(old, new):
+    changes = []
+
+    def add(field, old_value, new_value):
+        if norm(old_value) == norm(new_value):
+            return
+        changes.append((field, "" if old_value is None else old_value, new_value))
+
+    add("full_id", old["full_id"], new["full_id"])
+    add("name", old["name"], new["name"])
+    add("message", old["message"], new["message"])
+    add("severity", old["severity"], new["severity"])
+    add("quick_action", old["quick_action"], new["quick_action"])
+    add("category", old["category"], new["category"])
+    add("component", old["component"], new["component"])
+    if cases_key(old["test_cases"]) != cases_key(new["test_cases"]):
+        add(
+            "test_cases",
+            ", ".join(old["test_cases"]),
+            ", ".join(new["test_cases"]),
+        )
+    add("disposition", old["disposition"], new["disposition"])
+    old_retry = norm(old["retryable"]).lower()
+    new_retry = "true" if new["retryable"] else "false"
+    if old_retry in ("", "none") and new_retry:
+        add("retryable", old["retryable"], new_retry)
+    elif old_retry and old_retry != new_retry:
+        add("retryable", old["retryable"], new_retry)
+    add("owner", old["owner"], new["owner"])
+    add("since", old["since"], new["since"])
+    add("doc_url", old["doc_url"], new["doc_url"])
+    add("version", old["version"], new["version"])
+    if old["packed"] is not None and old["packed"] != new["packed"]:
+        add("packed", old["packed"], new["packed"])
+    if old["procedure"] and not same_text(old["procedure"], new["procedure"]):
+        add("procedure", old["procedure"], new["procedure"])
+    if not old["in_registry"]:
+        add("registry_status", "sheet only", "in registry")
+    if new["retired"]:
+        add("retired", "", "true")
+    return changes
+
+
+def summary_text(row):
+    cases = ", ".join(row["test_cases"])
+    return (
+        f"{row.get('name') or row['full_id']} | {row['full_id']} | "
+        f"{row['message']} | cases: {cases} | {row.get('component', '')}"
+    )
+
+
+def build_diff(old_rows, new_rows):
+    old_ix = index_by_stage(old_rows)
+    new_ix = index_by_stage(new_rows)
+    old_stages = stages_for(old_rows)
+    new_stages = stages_for(new_rows)
+    diffs = []
+    handled = set()
+
+    def emit(change, catalog, stage, base, name, full_old, full_new, field, old_value, new_value):
+        diffs.append(
+            {
+                "change_type": change,
+                "catalog": catalog,
+                "stage": stage,
+                "error_code": base,
+                "name": name,
+                "full_id_old": full_old,
+                "full_id_new": full_new,
+                "field": field,
+                "old_value": old_value,
+                "new_value": new_value,
+            }
+        )
+
+    def emit_fields(old, new, change="updated"):
+        for field, old_value, new_value in field_changes(old, new):
+            kind = "retired" if field == "retired" else change
+            emit(
+                kind,
+                new["catalog"],
+                new["stage"],
+                new["base"],
+                new["name"],
+                old["full_id"],
+                new["full_id"],
+                field,
+                old_value,
+                new_value,
+            )
+
+    bases = set(old_stages) | set(new_stages)
+    for base in sorted(bases):
+        if base.startswith("EC-"):
+            continue
+        old_map = old_stages.get(base, {})
+        new_map = new_stages.get(base, {})
+        old_set = set(old_map)
+        new_set = set(new_map)
+        if len(old_set) == 1 and len(new_set) == 1 and old_set != new_set:
+            old = next(iter(old_map.values()))
+            new = next(iter(new_map.values()))
+            emit(
+                "moved",
+                new["catalog"],
+                new["stage"],
+                base,
+                new["name"],
+                old["full_id"],
+                new["full_id"],
+                "stage",
+                old["stage"],
+                new["stage"],
+            )
+            emit_fields(old, new)
+            handled.add((old["stage"], base))
+            handled.add((new["stage"], base))
+            continue
+        for stage in sorted(new_set - old_set):
+            new = new_map[stage]
+            if not old_map:
+                kind = "retired" if new["retired"] else "added"
+                emit(
+                    kind,
+                    new["catalog"],
+                    stage,
+                    base,
+                    new["name"],
+                    "",
+                    new["full_id"],
+                    "code",
+                    "",
+                    summary_text(new),
+                )
+            else:
+                emit(
+                    "added",
+                    new["catalog"],
+                    stage,
+                    base,
+                    new["name"],
+                    "",
+                    new["full_id"],
+                    "stage",
+                    "previously in " + ", ".join(sorted(old_set)),
+                    stage,
+                )
+            handled.add((stage, base))
+        for stage in sorted(old_set - new_set):
+            old = old_map[stage]
+            still = ", ".join(sorted(new_set))
+            emit(
+                "removed",
+                "",
+                stage,
+                base,
+                old.get("name") or "",
+                old["full_id"],
+                "",
+                "code" if not still else "stage",
+                summary_text(old) if not still else stage,
+                "" if not still else "still listed in " + still,
+            )
+            handled.add((stage, base))
+
+    for key, new in sorted(new_ix.items()):
+        if key in handled or key not in old_ix:
+            continue
+        emit_fields(old_ix[key], new)
+
+    return diffs
+
+
+def dri2_of(test_cases, dri):
+    for test_case in test_cases:
+        hit = dri.get(test_case) or dri.get(
+            test_case if test_case.endswith("TestCase") else test_case + "TestCase"
+        )
+        if hit and (hit.get("DRI 2") or "").strip():
+            return hit["DRI 2"].strip()
+    return ""
+
+
+def error_type_of(row):
+    name = CATEGORY.get(row["category"], "")
+    return name.removeprefix("CATEGORY_").replace("_", " ").title()
+
+
+def annotate(new_rows, old_rows, dri):
+    old_ix = index_by_stage(old_rows)
+    for row in new_rows:
+        old = old_ix.get((row["stage"], row["base"]))
+        if old is None:
+            # A moved code keeps the author / bugs from its previous stage.
+            old = next(
+                (item for item in old_rows if item["base"] == row["base"]),
+                None,
+            )
+        author, basis = author_for(row["test_cases"], dri)
+        row["author"] = author
+        row["author_basis"] = basis
+        row["doc_rev"] = old["doc_rev"] if old and old.get("doc_rev") else DOC_REV_NEW
+        row["bugs"] = old.get("bugs", "") if old else ""
+        row["dri2"] = (old.get("dri2") if old else "") or dri2_of(row["test_cases"], dri)
+        row["error_type"] = (old.get("error_type") if old else "") or error_type_of(row)
+        row["source"] = (old.get("source") if old else "") or row["stage"]
+        row["root_cause"] = (old.get("root_cause") if old else "") or row["probable_causes"]
+        row["quick_action_txt"] = (
+            (old.get("quick_action_txt") if old else "")
+            or QUICK_ACTION.get(row["quick_action"], "").removeprefix("QA_")
+        )
+
+
+def joined_row(row):
+    category_name = CATEGORY.get(row["category"], "")
+    return [
+        row["full_id"],
+        row["packed"],
+        row["version"],
+        row["doc_rev"],
+        row["author"],
+        row["author_basis"],
+        row.get("dri2") or "",
+        row["name"],
+        row["message"],
+        row["severity"],
+        SEVERITY.get(row["severity"], ""),
+        row["quick_action"],
+        QUICK_ACTION.get(row["quick_action"], ""),
+        row.get("quick_action_txt") or "",
+        row["procedure"],
+        row.get("error_type") or "",
+        row["category"],
+        category_name,
+        row["component"],
+        ", ".join(row["test_cases"]),
+        row.get("source") or row["stage"],
+        row.get("root_cause") or "",
+        row["bugs"],
+        row["owner"],
+        row["since"],
+        row["disposition"],
+        row["retryable"],
+        "yes" if row["in_registry"] else "no",
+        "yes" if row.get("dup") else "",
+        row["doc_url"],
+    ]
+
+
+def drop_empty_columns(header, body):
+    keep = [
+        index
+        for index, _name in enumerate(header)
+        if any(str(row[index] if index < len(row) else "").strip() for row in body)
+    ]
+    if not keep:
+        return header, body
+    return (
+        [header[index] for index in keep],
+        [[row[index] if index < len(row) else "" for index in keep] for row in body],
+    )
+
+
+def write_csv(path, header, rows):
+    os.makedirs(os.path.dirname(path), exist_ok=True)
+    with open(path, "w", newline="", encoding="utf-8-sig") as handle:
+        writer = csv.writer(handle)
+        writer.writerow(header)
+        writer.writerows(rows)
+
+
+def write_tables(new_rows):
+    groups = {
+        "mlt_1x": [row for row in new_rows if row["catalog"] in ("mlt", "1x")],
+        "l10": [row for row in new_rows if row["catalog"] == "l10"],
+        "common": [row for row in new_rows if row["catalog"] == "common"],
+    }
+    for name, rows in groups.items():
+        rows.sort(key=lambda row: row["full_id"])
+        header, body = drop_empty_columns(JOINED_COLS, [joined_row(row) for row in rows])
+        write_csv(os.path.join(HERE, "data", name + ".csv"), header, body)
+    copy_file(
+        os.path.join(OLD, "data", "l11.csv"),
+        os.path.join(HERE, "data", "l11.csv"),
+    )
+    for name in ("mlt_1x.csv", "l10.csv", "l11.csv", "suite_run_log.csv", "revision_history.csv"):
+        src = os.path.join(OLD, "data", "source", name)
+        if os.path.isfile(src):
+            copy_file(src, os.path.join(HERE, "data", "source", name))
+
+
+def write_static():
+    for name in (
+        "dri_ownership.csv",
+        "field_definitions.csv",
+        "error_id_encoding.csv",
+        "source_data_notes.csv",
+    ):
+        copy_file(os.path.join(OLD, "data", name), os.path.join(HERE, "data", name))
+    for name in ("dri_ownership.csv", "field_definitions.csv"):
+        src = os.path.join(OLD, "data", "source", name)
+        if os.path.exists(src):
+            copy_file(src, os.path.join(HERE, "data", "source", name))
+    revisions = []
+    with open(os.path.join(OLD, "data", "revision_history.csv"), newline="", encoding="utf-8-sig") as handle:
+        revisions = list(csv.DictReader(handle))
+    sha = sw_sha()
+    if sha == "local":
+        # These snapshots were taken from etched-ai/sw at this commit.
+        sha = "65cf3520a606"
+    if SW_CODES == HERE:
+        marker = "Refresh from host/system_test/error_codes at sw@"
+        for row in reversed(revisions):
+            comment = row.get("Comment") or ""
+            if comment.startswith(marker) and not comment.endswith("@local"):
+                sha = comment[len(marker):]
+                break
+    refresh = f"Refresh from host/system_test/error_codes at sw@{sha}"
+    already = any((row.get("Comment") or "") == refresh for row in revisions)
+    if not already:
+        revisions.append(
+            {
+                "Version": DOC_REV_NEW,
+                "Comment": refresh,
+                "Author": "supercomputing-sw",
+            }
+        )
+    write_csv(
+        os.path.join(HERE, "data", "revision_history.csv"),
+        ["Version", "Comment", "Author"],
+        [[row["Version"], row["Comment"], row["Author"]] for row in revisions],
+    )
+    legends = (
+        [["category", key, value] for key, value in sorted(CATEGORY.items())]
+        + [["severity", key, value] for key, value in sorted(SEVERITY.items())]
+        + [["quick_action", key, value] for key, value in sorted(QUICK_ACTION.items())]
+    )
+    write_csv(
+        os.path.join(HERE, "data", "enum_legends.csv"),
+        ["Field", "Value", "Name"],
+        legends,
+    )
+    return revisions, sha
+
+
+def copy_registries():
+    copy_file(REGISTRY_FILES["1x"], os.path.join(HERE, "th_registry.yaml"))
+    copy_file(REGISTRY_FILES["common"], os.path.join(HERE, "common_th_registry.yaml"))
+    os.makedirs(os.path.join(HERE, "MLT"), exist_ok=True)
+    os.makedirs(os.path.join(HERE, "L10"), exist_ok=True)
+    copy_file(REGISTRY_FILES["mlt"], os.path.join(HERE, "MLT", "mlt_th_registry.yaml"))
+    copy_file(REGISTRY_FILES["l10"], os.path.join(HERE, "L10", "l10_th_registry.yaml"))
+    open(os.path.join(HERE, ".nojekyll"), "w", encoding="utf-8").close()
+
+
+def write_comparison(diffs, old_rows, new_rows):
+    l11 = [row for row in old_rows if row["stage"] == STAGE["l11"]]
+    updated_codes = {
+        (row["stage"], row["error_code"])
+        for row in diffs
+        if row["change_type"] in ("updated", "retired", "moved")
+    }
+    matched = set()
+    old_ix = index_by_stage([row for row in old_rows if row["stage"] != STAGE["l11"]])
+    new_ix = index_by_stage(new_rows)
+    for key in old_ix.keys() & new_ix.keys():
+        if not field_changes(old_ix[key], new_ix[key]):
+            matched.add(key)
+    # Moves are not in the intersection under the new stage.
+    summaries = [
+        ("summary", "", "", "", "", "", "", "old_published_codes_excluding_l11", "", str(len(old_rows) - len(l11))),
+        ("summary", "", "", "", "", "", "", "new_registry_codes", "", str(len(new_rows))),
+        ("summary", "", "", "", "", "", "", "added", "", str(sum(1 for row in diffs if row["change_type"] == "added" and row["field"] == "code"))),
+        ("summary", "", "", "", "", "", "", "added_to_extra_stage", "", str(sum(1 for row in diffs if row["change_type"] == "added" and row["field"] == "stage"))),
+        ("summary", "", "", "", "", "", "", "removed", "", str(sum(1 for row in diffs if row["change_type"] == "removed"))),
+        ("summary", "", "", "", "", "", "", "moved", "", str(sum(1 for row in diffs if row["change_type"] == "moved"))),
+        ("summary", "", "", "", "", "", "", "retired_markers", "", str(sum(1 for row in diffs if row["change_type"] == "retired"))),
+        ("summary", "", "", "", "", "", "", "updated_field_rows", "", str(sum(1 for row in diffs if row["change_type"] == "updated"))),
+        ("summary", "", "", "", "", "", "", "codes_with_field_changes", "", str(len(updated_codes))),
+        ("summary", "", "", "", "", "", "", "unchanged_codes", "", str(len(matched))),
+        ("summary", "", "", "", "", "", "", "l11_carried_forward_not_in_registry", "", str(len(l11))),
+    ]
+    header = [
+        "change_type",
+        "catalog",
+        "stage",
+        "error_code",
+        "name",
+        "full_id_old",
+        "full_id_new",
+        "field",
+        "old_value",
+        "new_value",
+    ]
+    order = {"summary": 0, "added": 1, "removed": 2, "moved": 3, "retired": 4, "updated": 5}
+    body = []
+    for row in summaries:
+        body.append(list(row))
+    detail = sorted(
+        diffs,
+        key=lambda row: (
+            order.get(row["change_type"], 9),
+            row["stage"],
+            row["error_code"],
+            DIFF_FIELDS.index(row["field"]) if row["field"] in DIFF_FIELDS else 99,
+        ),
+    )
+    for row in detail:
+        body.append(
+            [
+                row["change_type"],
+                row["catalog"],
+                row["stage"],
+                row["error_code"],
+                row["name"],
+                row["full_id_old"],
+                row["full_id_new"],
+                row["field"],
+                row["old_value"],
+                row["new_value"],
+            ]
+        )
+    path = os.path.join(HERE, "error_code_update_comparison.csv")
+    write_csv(path, header, body)
+    return path, summaries
+
+
+def esc(value):
+    return html.escape(str("" if value is None else value))
+
+
+NONE = "\u2014"
+REPO_VERSION = "0.1"
+REPO_URL = "https://github.com/Quan-Etched/ErrorCode_Prod_Test"
+PAGES_URL = "https://quan-etched.github.io/ErrorCode_Prod_Test/"
+SHEET_URL = (
+    "https://docs.google.com/spreadsheets/d/"
+    "1zKcxEXyYFLAQkI0AnVtZnSQ7Z-sxGqzGBpc9-0qhrqk/edit?gid=1353335746"
+)
+REGISTRY_URL = (
+    "https://github.com/etched-ai/sw/blob/master/host/system_test/"
+    "error_codes/th_registry.yaml"
+)
+SLACK_URL = "https://etchedai.slack.com/archives/C0B299EA7UK"
+SLACK_URL_2 = "https://etchedai.slack.com/archives/C0BMBRF327R"
+
+
+def page_css():
+    text = open(os.path.join(OLD, "index.html"), encoding="utf-8").read()
+    start = text.index("<style>") + len("<style>")
+    end = text.index("</style>")
+    return text[start:end]
+
+
+def read_dicts(path):
+    if not os.path.isfile(path):
+        return []
+    with open(path, newline="", encoding="utf-8-sig") as handle:
+        return list(csv.DictReader(handle))
+
+
+def file_size(path):
+    if not os.path.isfile(path):
+        return NONE
+    size = os.path.getsize(path)
+    if size < 1024 * 1024:
+        return f"{size / 1024:.0f} KB"
+    return f"{size / 1048576:.1f} MB"
+
+
+def dri_index():
+    found = {}
+    for row in read_dicts(os.path.join(HERE, "data", "dri_ownership.csv")):
+        name = (row.get("Test Case") or "").strip()
+        if name:
+            found[name] = {
+                "dri1": (row.get("DRI 1") or "").strip(),
+                "dri2": (row.get("DRI 2") or "").strip(),
+                "status": (row.get("Status") or "").strip(),
+                "pr": (row.get("PR") or "").strip(),
+            }
+    return found
+
+
+def blank():
+    return f'<span class="none">{NONE}</span>'
+
+
+def cases_html(cases, dri):
     if not cases:
-        return '<span class="none">—</span>'
+        return blank()
     out = []
-    for c in cases:
-        d = DRI.get(c) or DRI.get(c + 'TestCase')
-        if d and d['pr']:
-            pr = d['pr'].split(',')[0].strip().rstrip('/')
-            out.append(f'<a href="{esc(pr)}"><code>{esc(c)}</code></a>')
+    for case in cases:
+        hit = dri.get(case) or dri.get(case + "TestCase")
+        if hit and hit["pr"]:
+            pr = hit["pr"].split(",")[0].strip().rstrip("/")
+            out.append(f'<a href="{esc(pr)}"><code>{esc(case)}</code></a>')
         else:
-            out.append(f'<code>{esc(c)}</code>')
-    return '<br>'.join(out)
+            out.append(f"<code>{esc(case)}</code>")
+    return "<br>".join(out)
+
 
 def bugs_html(bugs):
-    if not bugs.strip():
-        return '<span class="none">—</span>'
+    if not str(bugs or "").strip():
+        return blank()
     parts = []
-    for b in re.split(r',(?=\s*ETCH-)', bugs):
-        b = b.strip()
-        m = re.match(r'(ETCH-\d+)(.*)', b)
-        if m:
-            parts.append(f'<a href="https://etched.atlassian.net/browse/{m.group(1)}">'
-                         f'{m.group(1)}</a>{esc(m.group(2))}')
+    for bug in re.split(r",(?=\s*ETCH-)", str(bugs)):
+        bug = bug.strip()
+        match = re.match(r"(ETCH-\d+)(.*)", bug)
+        if match:
+            parts.append(
+                f'<a href="https://etched.atlassian.net/browse/{match.group(1)}">'
+                f"{match.group(1)}</a>{esc(match.group(2))}"
+            )
         else:
-            parts.append(esc(b))
-    return '<br>'.join(parts)
+            parts.append(esc(bug))
+    return "<br>".join(parts)
 
-def sev_badge(sev):
-    if sev is None:
-        return '<span class="none">—</span>'
-    return f'<span class="badge sev sev{sev}" title="{esc(SEVERITY.get(sev, ""))}">S{sev} {esc(SEVERITY.get(sev, "").replace("ERROR_", ""))}</span>'
 
-def qa_badge(qa, txt):
-    if qa is None:
-        return f'<span class="badge qa">{esc(txt or "—")}</span>'
-    return (f'<span class="badge qa qa{qa}" title="{esc(QUICK_ACTION.get(qa, ""))}">'
-            f'Q{qa} {esc(QUICK_ACTION.get(qa, "").replace("QA_", ""))}</span>')
+def sev_badge(severity):
+    if severity is None or severity == "":
+        return blank()
+    severity = int(severity)
+    label = SEVERITY.get(severity, "").removeprefix("ERROR_")
+    return (
+        f'<span class="badge sev sev{severity}" title="{esc(SEVERITY.get(severity, ""))}">'
+        f"S{severity} {esc(label)}</span>"
+    )
 
-def code_table(recs, show_packed=False, show_root=False):
-    th = ['Error Code ID']
-    if show_packed:
-        th.append('Packed')
-    th += ['Ver', 'Doc Rev', 'Original Author', 'Name', 'Message', 'Severity',
-           'Quick Action', 'Recover / Troubleshooting Procedure', 'Error Type',
-           'Component', 'Test Case', 'Source']
-    if show_root:
-        th.append('Possible Root Cause')
-    th += ['Bugs', 'Owner', 'Since']
-    rows = []
-    for r in recs:
-        tds = []
-        anchor = re.sub(r'[^A-Za-z0-9]+', '-', r['stage']).strip('-').lower() + '--' + r['code']
-        reg_mark = '' if r['in_registry'] else ' <span class="badge nyr" title="not yet in th_registry.yaml">sheet only</span>'
-        if r.get('dup'):
-            reg_mark += (' <span class="badge nyr" title="listed more than once in this '
-                         'sheet block; merged, see Source data notes">merged</span>')
-        link = (f'<a href="{esc(r["doc_url"])}"><code>{esc(r["code"])}</code></a>'
-                if r['doc_url'] else f'<code>{esc(r["code"])}</code>')
-        tds.append(f'<td class="id" id="{esc(anchor)}">{link}{reg_mark}</td>')
-        if show_packed:
-            tds.append(f'<td class="num"><code>{esc(r["packed"]) or "—"}</code></td>')
-        vt = ('version: in th_registry.yaml' if r['in_registry']
-              else 'not in th_registry.yaml yet; first revision by definition')
-        tds.append(f'<td class="num"><span class="badge ver" title="{esc(vt)}">'
-                   f'v{esc(r["version"])}</span></td>')
-        tds.append(f'<td class="num">{esc(r["doc_rev"])}</td>')
-        tds.append(f'<td class="who" title="{esc(r["author_basis"])}">{esc(r["author"])}</td>')
-        tds.append(f'<td><code class="nm">{esc(r["name"]) or "—"}</code></td>')
-        tds.append(f'<td class="msg">{esc(r["message"])}</td>')
-        tds.append(f'<td>{sev_badge(r["severity"])}</td>')
-        tds.append(f'<td>{qa_badge(r["qa"], r["quick_action_txt"])}</td>')
-        tds.append(f'<td class="msg">{esc(r["procedure"]) or "<span class=none>—</span>"}</td>')
-        tds.append(f'<td>{esc(r["error_type"])}</td>')
-        tds.append(f'<td><code>{esc(r["component"])}</code></td>')
-        tds.append(f'<td>{cases_html(r["test_cases"])}</td>')
-        tds.append(f'<td>{esc(r["source"])}</td>')
-        if show_root:
-            tds.append(f'<td class="msg">{esc(r["root_cause"]) or "<span class=none>—</span>"}</td>')
-        tds.append(f'<td>{bugs_html(r["bugs"])}</td>')
-        tds.append(f'<td>{esc(r["owner"]) or "<span class=none>—</span>"}</td>')
-        tds.append(f'<td class="num">{esc(r["since"]) or "<span class=none>—</span>"}</td>')
-        rows.append('<tr>' + ''.join(tds) + '</tr>')
-    head = ''.join(f'<th>{esc(h)}</th>' for h in th)
-    return ('<div class="scroll"><table class="codes">\n<thead><tr>' + head +
-            '</tr></thead>\n<tbody>\n' + '\n'.join(rows) + '\n</tbody></table></div>')
+
+def qa_badge(quick, text):
+    if quick is None or quick == "":
+        return f'<span class="badge qa">{esc(text or NONE)}</span>'
+    quick = int(quick)
+    label = QUICK_ACTION.get(quick, "").removeprefix("QA_")
+    return (
+        f'<span class="badge qa qa{quick}" title="{esc(QUICK_ACTION.get(quick, ""))}">'
+        f"Q{quick} {esc(label)}</span>"
+    )
+
+
+def code_key(record):
+    return re.sub(r"\d+", lambda match: match.group().zfill(6), record["code"])
+
+
+def page_record(row):
+    return {
+        "code": row["full_id"],
+        "stage": row["stage"],
+        "packed": row["packed"],
+        "version": row["version"],
+        "doc_rev": row["doc_rev"],
+        "author": row["author"],
+        "author_basis": row["author_basis"],
+        "name": row["name"],
+        "message": row["message"],
+        "severity": row["severity"],
+        "qa": row["quick_action"],
+        "quick_action_txt": row.get("quick_action_txt") or "",
+        "procedure": row["procedure"],
+        "error_type": row.get("error_type") or "",
+        "component": row["component"],
+        "test_cases": row["test_cases"],
+        "source": row.get("source") or row["stage"],
+        "root_cause": row.get("root_cause") or "",
+        "bugs": row.get("bugs") or "",
+        "owner": row["owner"],
+        "since": row["since"],
+        "doc_url": row["doc_url"],
+        "in_registry": True,
+        "retired": row.get("retired"),
+    }
+
+
+def l11_records():
+    records = []
+    for raw in read_dicts(os.path.join(HERE, "data", "l11.csv")):
+        code = (raw.get("Error Code ID") or "").strip()
+        if not code:
+            continue
+        severity = (raw.get("Severity") or "").strip()
+        quick = (raw.get("Quick Action") or "").strip()
+        records.append(
+            {
+                "code": code,
+                "stage": "L11 Test",
+                "packed": raw.get("Packed") or "",
+                "version": raw.get("Version") or 1,
+                "doc_rev": raw.get("Doc Rev") or "",
+                "author": raw.get("Original Author") or "",
+                "author_basis": raw.get("Author Basis") or "",
+                "name": raw.get("Name") or "",
+                "message": raw.get("Message") or "",
+                "severity": int(severity) if severity.isdigit() else None,
+                "qa": int(quick) if quick.isdigit() else None,
+                "quick_action_txt": raw.get("Quick Action (sheet)") or "",
+                "procedure": raw.get("Recover / Troubleshooting Procedure") or "",
+                "error_type": raw.get("Error Type") or "",
+                "component": raw.get("Component") or "",
+                "test_cases": [
+                    part.strip()
+                    for part in (raw.get("Test Case") or "").split(",")
+                    if part.strip()
+                ],
+                "source": raw.get("Source") or "",
+                "root_cause": raw.get("Possible Root Cause") or "",
+                "bugs": raw.get("Bugs") or "",
+                "owner": raw.get("Owner") or "",
+                "since": raw.get("Since") or "",
+                "doc_url": raw.get("Doc URL") or "",
+                "in_registry": (raw.get("In th_registry.yaml") or "").strip().lower() == "yes",
+                "retired": False,
+            }
+        )
+    records.sort(key=code_key)
+    return records
+
 
 def kv_table(pairs, headers):
-    head = ''.join(f'<th>{esc(h)}</th>' for h in headers)
-    body = '\n'.join('<tr>' + ''.join(f'<td>{c}</td>' for c in row) + '</tr>' for row in pairs)
-    return ('<div class="scroll"><table>\n<thead><tr>' + head +
-            '</tr></thead>\n<tbody>\n' + body + '\n</tbody></table></div>')
-
-# revision history — first version first (ascending)
-rev_rows = [[f'<strong>{esc(r["Version"])}</strong>', esc(r['Comment']), esc(r['Author'])]
-            for r in sorted(revisions, key=lambda r: [int(p) for p in r['Version'].split('.')])]
-
-field_rows = [[f'<code>{esc(r["Field"])}</code>', esc(r['Describe'])] for r in field_defs]
-
-bit_hdr = next((r for r in bitfield if r['Field'] == 'Char #'), None)
-bit_desc = next((r for r in bitfield if r['Field'] == 'Describe'), None)
-bit_def = next((r for r in bitfield if r['Field'] == 'Define'), None)
-bit_rows = []
-if bit_hdr and bit_desc and bit_def:
-    keys = [k for k in bit_hdr if k != 'Field']
-    for k in keys:
-        if not bit_hdr.get(k):
-            continue
-        bit_rows.append([f'<code>{esc(bit_hdr[k])}</code>',
-                         f'<strong>{esc(bit_desc.get(k, ""))}</strong>',
-                         esc(bit_def.get(k, '')).replace('  ', '<br>')])
-
-dri_table_rows = []
-for tc, d in sorted(DRI.items()):
-    pr = ''
-    for u in [x.strip().rstrip('/') for x in d['pr'].split(',') if x.strip()]:
-        n = u.rstrip('/').split('/')[-1]
-        pr += f'<a href="{esc(u)}">#{esc(n)}</a> '
-    dri_table_rows.append([f'<code>{esc(tc)}</code>', esc(d['dri1']), esc(d['dri2']),
-                           esc(d['status']) or '<span class="none">—</span>',
-                           pr or '<span class="none">—</span>'])
-
-cat_rows = [[f'<code>{k}</code>', f'<code>{esc(v)}</code>'] for k, v in sorted(CATEGORY.items())]
-sev_rows = [[f'<code>{k}</code>', f'<code>{esc(v)}</code>'] for k, v in sorted(SEVERITY.items())]
-qa_rows = [[f'<code>{k}</code>', f'<code>{esc(v)}</code>'] for k, v in sorted(QUICK_ACTION.items())]
-
-if COLLISIONS:
-    collision_html = kv_table(
-        [[f'<code>{esc(c["code"])}</code>', esc(c['stage']),
-          f'<code>{esc(c["kept"])}</code>', f'<code>{esc(c["dropped"])}</code>',
-          esc(c['dropped_msg']) or '<span class="none">—</span>',
-          f'<code>{esc(c["dropped_cases"])}</code>' if c['dropped_cases'] else '<span class="none">—</span>']
-         for c in sorted(COLLISIONS, key=lambda c: c['code'])],
-        ['Error Code ID', 'Stage', 'Quick action kept', 'Quick action dropped',
-         'Dropped row message', 'Dropped row test cases'])
-    collision_html = (
-        '<p>These Error Code IDs each appear twice in one stage block of the sheet '
-        '(an older short-form row plus a later expanded row). Identity segments are '
-        'immutable, so the repeat is the same code: the row with more detail is kept '
-        'and the other is listed here for reconciliation in the sheet.</p>' + collision_html)
-else:
-    collision_html = '<p>No duplicate Error Code IDs within a stage block.</p>'
+    head = "".join(f"<th>{esc(header)}</th>" for header in headers)
+    body = "\n".join(
+        "<tr>" + "".join(f"<td>{cell}</td>" for cell in row) + "</tr>" for row in pairs
+    )
+    return (
+        '<div class="scroll"><table>\n<thead><tr>'
+        + head
+        + "</tr></thead>\n<tbody>\n"
+        + body
+        + "\n</tbody></table></div>"
+    )
 
 
-# ------------------------------------------------------------------- exports
-# The maintainable copy of the sheet: one worksheet per source tab, plus a CSV
-# of each so git can diff revisions. Regenerated from sheet.md + the registry,
-# NOT a copy of the Drive binary (Drive binary export is not reachable here).
-CODE_COLS = [
-    ('Error Code ID', lambda r: r['code']),
-    ('Packed', lambda r: r['packed']),
-    ('Version', lambda r: r['version']),
-    ('Doc Rev', lambda r: r['doc_rev']),
-    ('Original Author', lambda r: r['author']),
-    ('Author Basis', lambda r: r['author_basis']),
-    ('DRI 2', lambda r: r['dri2']),
-    ('Name', lambda r: r['name']),
-    ('Message', lambda r: r['message']),
-    ('Severity', lambda r: r['severity']),
-    ('Severity Name', lambda r: SEVERITY.get(r['severity'], '')),
-    ('Quick Action', lambda r: r['qa']),
-    ('Quick Action Name', lambda r: QUICK_ACTION.get(r['qa'], '')),
-    ('Quick Action (sheet)', lambda r: r['quick_action_txt']),
-    ('Recover / Troubleshooting Procedure', lambda r: r['procedure']),
-    ('Error Type', lambda r: r['error_type']),
-    ('Category', lambda r: r['category']),
-    ('Category Name', lambda r: CATEGORY.get(r['category'], '')),
-    ('Component', lambda r: r['component']),
-    ('Test Case', lambda r: ', '.join(r['test_cases'])),
-    ('Source', lambda r: r['source']),
-    ('Possible Root Cause', lambda r: r['root_cause']),
-    ('Bugs', lambda r: r['bugs']),
-    ('Owner', lambda r: r['owner']),
-    ('Since', lambda r: r['since']),
-    ('Disposition', lambda r: r['disposition']),
-    ('Retryable', lambda r: r['retryable']),
-    ('In th_registry.yaml', lambda r: 'yes' if r['in_registry'] else 'no'),
-    ('Merged Duplicate', lambda r: 'yes' if r.get('dup') else ''),
-    ('Doc URL', lambda r: r['doc_url']),
-]
-
-def code_sheet(recs):
-    """Drop columns that are empty for every row in this stage."""
-    cols = [(h, f) for h, f in CODE_COLS
-            if any(str(f(r) or '').strip() for r in recs)]
-    return [h for h, _ in cols], [[f(r) for _, f in cols] for r in recs]
-
-def plain(rows, keys):
-    return [[r.get(k, '') for k in keys] for r in rows]
-
-def workbook_tabs():
-    tabs = []
-    tabs.append(('Revision History', ['Version', 'Comment', 'Author'],
-                 plain(sorted(revisions,
-                              key=lambda r: [int(p) for p in r['Version'].split('.')]),
-                       ['Version', 'Comment', 'Author'])))
-    for name, recs in (('MLT 1X', mlt), ('L10', l10), ('L11', l11)):
-        hdr, rows = code_sheet(recs)
-        tabs.append((name, hdr, rows))
-    tabs.append(('Field Definitions', ['Field', 'Describe'],
-                 [[r['Field'], r['Describe']] for r in field_defs]))
-    if bit_rows:
-        tabs.append(('Error ID Encoding', ['Char #', 'Describe', 'Define'],
-                     [[re.sub('<[^>]+>', '', c.replace('<br>', '\n')) for c in row]
-                      for row in bit_rows]))
-    tabs.append(('DRI Ownership', ['Test Case', 'DRI 1', 'DRI 2', 'Status', 'PR'],
-                 [[tc, d['dri1'], d['dri2'], d['status'], d['pr']]
-                  for tc, d in sorted(DRI.items())]))
-    if COLLISIONS:
-        tabs.append(('Source Data Notes',
-                     ['Error Code ID', 'Stage', 'Quick action kept',
-                      'Quick action dropped', 'Dropped row message',
-                      'Dropped row test cases'],
-                     [[c['code'], c['stage'], c['kept'], c['dropped'],
-                       c['dropped_msg'], c['dropped_cases']]
-                      for c in sorted(COLLISIONS, key=lambda c: c['code'])]))
-    tabs.append(('Enum Legends', ['Field', 'Value', 'Name'],
-                 [['category', k, v] for k, v in sorted(CATEGORY.items())] +
-                 [['severity', k, v] for k, v in sorted(SEVERITY.items())] +
-                 [['quick_action', k, v] for k, v in sorted(QUICK_ACTION.items())]))
-    return tabs
-
-TABS = workbook_tabs()
-
-def slug(name):
-    return re.sub(r'[^a-z0-9]+', '_', name.lower()).strip('_')
-
-def write_csvs(tabs):
-    os.makedirs(DATA_DIR, exist_ok=True)
-    written = []
-    for name, hdr, rows in tabs:
-        path = os.path.join(DATA_DIR, slug(name) + '.csv')
-        with open(path, 'w', newline='') as fh:
-            w = csv.writer(fh)
-            w.writerow(hdr)
-            for r in rows:
-                w.writerow(['' if c is None else c for c in r])
-        written.append((os.path.basename(path), name, len(rows)))
-    return written
-
-NUMERIC = re.compile(r'[1-9]\d*$')
-
-def cell(v):
-    """Original cell value; integers back to numbers, everything else verbatim.
-
-    Leading-zero and dotted strings stay text ('0.1', '00: Undefine') because
-    that is what the sheet holds.
-    """
-    return int(v) if NUMERIC.fullmatch(v) else v
-
-def source_grids():
-    """The sheet as exported: one grid per tab, rows verbatim, blanks kept."""
-    out = []
-    for i, block in enumerate(BL):
-        name = SOURCE_TABS[i] if i < len(SOURCE_TABS) else f'Sheet{i + 1}'
-        width = max(len(r) for r in block)
-        rows = [[cell(r[c]) if c < len(r) else '' for c in range(width)] for r in block]
-        out.append((name, rows))
-    return out
-
-def write_source_xlsx(grids):
-    """Mirror of the original workbook: same tabs, same columns, same rows.
-
-    Nothing is added, dropped, reordered or restyled -- the point is that a
-    download of this file is the sheet, not a view of it. Formatting, merges
-    and formulas cannot survive the markdown export and are not reconstructed.
-    """
-    try:
-        from openpyxl import Workbook
-        from openpyxl.utils import get_column_letter
-    except ImportError:
-        return False
-    wb = Workbook()
-    wb.remove(wb.active)
-    for name, rows in grids:
-        ws = wb.create_sheet(name[:31])
-        for r in rows:
-            ws.append(r)
-        width = max(len(r) for r in rows)
-        for i in range(1, width + 1):
-            longest = max(len(str(r[i - 1])) for r in rows if i <= len(r))
-            ws.column_dimensions[get_column_letter(i)].width = min(max(longest + 2, 9), 60)
-    wb.save(XLSX)
-    return True
-
-def write_source_csvs(grids):
-    os.makedirs(SRC_DIR, exist_ok=True)
-    written = []
-    for name, rows in grids:
-        path = os.path.join(SRC_DIR, slug(name) + '.csv')
-        with open(path, 'w', newline='') as fh:
-            csv.writer(fh).writerows(rows)
-        written.append((os.path.basename(path), name, len(rows)))
-    return written
+def code_table(records, dri, show_packed=False, show_root=False):
+    headers = ["Error Code ID"]
+    if show_packed:
+        headers.append("Packed")
+    headers += [
+        "Ver",
+        "Doc Rev",
+        "Original Author",
+        "Name",
+        "Message",
+        "Severity",
+        "Quick Action",
+        "Recover / Troubleshooting Procedure",
+        "Error Type",
+        "Component",
+        "Test Case",
+        "Source",
+    ]
+    if show_root:
+        headers.append("Possible Root Cause")
+    headers += ["Bugs", "Owner", "Since"]
+    rows = []
+    for record in records:
+        anchor = (
+            re.sub(r"[^A-Za-z0-9]+", "-", record["stage"]).strip("-").lower()
+            + "--"
+            + record["code"]
+        )
+        mark = ""
+        if record.get("retired"):
+            mark += ' <span class="badge nyr">retired</span>'
+        elif not record["in_registry"]:
+            mark += (
+                ' <span class="badge nyr" title="not yet in th_registry.yaml">'
+                "sheet only</span>"
+            )
+        if record["doc_url"]:
+            link = f'<a href="{esc(record["doc_url"])}"><code>{esc(record["code"])}</code></a>'
+        else:
+            link = f'<code>{esc(record["code"])}</code>'
+        cells = [f'<td class="id" id="{esc(anchor)}">{link}{mark}</td>']
+        if show_packed:
+            cells.append(f'<td class="num"><code>{esc(record["packed"]) or NONE}</code></td>')
+        version_title = (
+            "version: in th_registry.yaml"
+            if record["in_registry"]
+            else "not in th_registry.yaml yet; first revision by definition"
+        )
+        cells.append(
+            f'<td class="num"><span class="badge ver" title="{esc(version_title)}">'
+            f'v{esc(record["version"])}</span></td>'
+        )
+        cells.append(f'<td class="num">{esc(record["doc_rev"])}</td>')
+        cells.append(
+            f'<td class="who" title="{esc(record["author_basis"])}">{esc(record["author"])}</td>'
+        )
+        cells.append(f'<td><code class="nm">{esc(record["name"]) or NONE}</code></td>')
+        cells.append(f'<td class="msg">{esc(record["message"])}</td>')
+        cells.append(f'<td>{sev_badge(record["severity"])}</td>')
+        cells.append(f'<td>{qa_badge(record["qa"], record["quick_action_txt"])}</td>')
+        procedure = esc(record["procedure"]) or f'<span class="none">{NONE}</span>'
+        cells.append(f'<td class="msg">{procedure}</td>')
+        cells.append(f'<td>{esc(record["error_type"])}</td>')
+        cells.append(f'<td><code>{esc(record["component"])}</code></td>')
+        cells.append(f'<td>{cases_html(record["test_cases"], dri)}</td>')
+        cells.append(f'<td>{esc(record["source"])}</td>')
+        if show_root:
+            cause = esc(record["root_cause"]) or f'<span class="none">{NONE}</span>'
+            cells.append(f'<td class="msg">{cause}</td>')
+        cells.append(f'<td>{bugs_html(record["bugs"])}</td>')
+        cells.append(f'<td>{esc(record["owner"]) or blank()}</td>')
+        cells.append(f'<td class="num">{esc(record["since"]) or blank()}</td>')
+        rows.append("<tr>" + "".join(cells) + "</tr>")
+    head = "".join(f"<th>{esc(header)}</th>" for header in headers)
+    return (
+        '<div class="scroll"><table class="codes">\n<thead><tr>'
+        + head
+        + "</tr></thead>\n<tbody>\n"
+        + "\n".join(rows)
+        + "\n</tbody></table></div>"
+    )
 
 
-def write_xlsx(tabs):
-    """The joined view: sheet data plus everything resolved from the registry."""
-    try:
-        from openpyxl import Workbook
-        from openpyxl.styles import Alignment, Font, PatternFill
-        from openpyxl.utils import get_column_letter
-    except ImportError:
-        print('openpyxl not installed - skipping workbooks', file=sys.stderr)
-        return False
-    wb = Workbook()
-    wb.remove(wb.active)
-    head_font = Font(bold=True, color='FFFFFF')
-    head_fill = PatternFill('solid', fgColor='3C4450')
-    wrap = Alignment(vertical='top', wrap_text=True)
-    top = Alignment(vertical='top')
-    for name, hdr, rows in tabs:
-        ws = wb.create_sheet(name[:31])
-        ws.append(hdr)
-        for r in rows:
-            ws.append(['' if c is None else c for c in r])
-        for c in ws[1]:
-            c.font, c.fill = head_font, head_fill
-            c.alignment = Alignment(vertical='center', wrap_text=True)
-        ws.freeze_panes = 'A2'
-        if rows:
-            ws.auto_filter.ref = (f'A1:{get_column_letter(len(hdr))}{len(rows) + 1}')
-        for i, h in enumerate(hdr, start=1):
-            widest = max([len(str(h))] + [len(str(r[i - 1])) for r in rows if i <= len(r)])
-            width = min(max(widest + 2, 10), 60)
-            ws.column_dimensions[get_column_letter(i)].width = width
-            for cell in ws[get_column_letter(i)][1:]:
-                cell.alignment = wrap if width >= 40 else top
-        ws.row_dimensions[1].height = 30
-    wb.save(ANNOTATED)
-    return True
-
-GRIDS = source_grids()
-src_ok = write_source_xlsx(GRIDS)
-src_csvs = write_source_csvs(GRIDS)
-csvs = write_csvs(TABS)
-ok = write_xlsx(TABS)
-print(f'wrote {XLSX_NAME} (verbatim mirror, {len(GRIDS)} tabs)' if src_ok else
-      'openpyxl missing - no workbooks written')
-for fn, name, n in src_csvs:
-    print(f'  data/source/{fn:<26} {name} ({n} rows)')
-if ok:
-    print(f'wrote {ANNOTATED_NAME} (joined view, {len(TABS)} tabs)')
-for fn, name, n in csvs:
-    print(f'  data/{fn:<33} {name} ({n} rows)')
+def section(title, anchor, body, intro=""):
+    intro_html = f'<p class="sub">{intro}</p>' if intro else ""
+    return f'<h2 id="{anchor}">{esc(title)}</h2>{intro_html}{body}'
 
 
-def human(path):
-    n = os.path.getsize(path)
-    return f'{n / 1024:.0f} KB' if n < 1024 * 1024 else f'{n / 1048576:.1f} MB'
+def write_html(new_rows, revisions, sha, summary_pairs):
+    del summary_pairs
+    dri = dri_index()
+    mlt = sorted(
+        [page_record(row) for row in new_rows if row["catalog"] in ("mlt", "1x")],
+        key=code_key,
+    )
+    l10 = sorted(
+        [page_record(row) for row in new_rows if row["catalog"] == "l10"],
+        key=code_key,
+    )
+    common = sorted(
+        [page_record(row) for row in new_rows if row["catalog"] == "common"],
+        key=code_key,
+    )
+    l11 = l11_records()
+    total = len(mlt) + len(l10) + len(common) + len(l11)
+    in_reg = len(mlt) + len(l10) + len(common)
 
+    def stat(count, label):
+        return (
+            f'<div class="stat"><div class="n">{count}</div>'
+            f'<div class="l">{esc(label)}</div></div>'
+        )
 
-download_rows = [
-    [f'<a href="{XLSX_NAME}"><strong>{XLSX_NAME}</strong></a>' if src_ok else
-     f'<code>{XLSX_NAME}</code>',
-     'The source workbook &mdash; a mirror of the original spreadsheet. Same tabs in '
-     'the same order, same columns, same rows, nothing added or reordered. '
-     'This is the file to edit and commit.',
-     human(XLSX) if src_ok else '&mdash;'],
-    [f'<a href="{ANNOTATED_NAME}">{ANNOTATED_NAME}</a>' if ok else
-     f'<code>{ANNOTATED_NAME}</code>',
-     'The same data with everything this page joins in &mdash; version, original '
-     'author, severity/quick-action names, owner, <code>since</code>, registry '
-     'status &mdash; plus autofilters and frozen headers.',
-     human(ANNOTATED) if ok else '&mdash;'],
-    ['<code>data/source/</code><br>' + '<br>'.join(
-         f'<a href="data/source/{fn}">{fn}</a>' for fn, _, _ in src_csvs),
-     'Each source tab as CSV, verbatim &mdash; the diffable form of the workbook above.',
-     f'{len(src_csvs)} files'],
-    ['<code>data/</code><br>' + '<br>'.join(
-         f'<a href="data/{fn}">{fn}</a>' for fn, _, _ in csvs),
-     f'The {len(csvs)} joined tabs as CSV &mdash; so git diffs a revision line by line '
-     'instead of as a binary blob.',
-     f'{len(csvs)} files'],
-    ['<a href="sheet.md">sheet.md</a>',
-     'Verbatim export of the Google Sheet the tables were built from.',
-     human(SHEET)],
-    ['<a href="th_registry.yaml">th_registry.yaml</a>',
-     'Snapshot of the source of truth from <code>etched-ai/sw@master</code>.',
-     human(REGISTRY)],
-]
+    rev_rows = [
+        [f"<strong>{esc(row['Version'])}</strong>", esc(row["Comment"]), esc(row["Author"])]
+        for row in sorted(revisions, key=lambda row: [int(part) for part in row["Version"].split(".")])
+    ]
+    doc_rev = revisions[-1]["Version"] if revisions else ""
+    versions = sorted({row["version"] for row in new_rows})
+    if versions == [1]:
+        version_note = "every code at <code>version: 1</code>"
+    else:
+        shown = ", ".join(f"<code>version: {esc(item)}</code>" for item in versions)
+        version_note = "registry versions " + shown
 
+    field_rows = [
+        [f"<code>{esc(row['Field'])}</code>", esc(row["Describe"])]
+        for row in read_dicts(os.path.join(HERE, "data", "field_definitions.csv"))
+        if (row.get("Field") or "") not in ("", "Char #", "Describe", "Define")
+    ]
+    bit_rows = [
+        [
+            f"<code>{esc(row.get('Char #') or '')}</code>",
+            f"<strong>{esc(row.get('Describe') or '')}</strong>",
+            esc(row.get("Define") or "").replace("\n", "<br>"),
+        ]
+        for row in read_dicts(os.path.join(HERE, "data", "error_id_encoding.csv"))
+    ]
+    dri_rows = []
+    for name, item in sorted(dri.items()):
+        links = ""
+        for url in [part.strip().rstrip("/") for part in item["pr"].split(",") if part.strip()]:
+            number = url.rstrip("/").split("/")[-1]
+            links += f'<a href="{esc(url)}">#{esc(number)}</a> '
+        dri_rows.append(
+            [
+                f"<code>{esc(name)}</code>",
+                esc(item["dri1"]),
+                esc(item["dri2"]),
+                esc(item["status"]) or blank(),
+                links or blank(),
+            ]
+        )
+    notes = read_dicts(os.path.join(HERE, "data", "source_data_notes.csv"))
+    if notes:
+        collision_html = (
+            "<p>These Error Code IDs each appear twice in one stage block of the sheet "
+            "(an older short-form row plus a later expanded row). Identity segments are "
+            "immutable, so the repeat is the same code: the row with more detail is kept "
+            "and the other is listed here for reconciliation in the sheet.</p>"
+            + kv_table(
+                [
+                    [
+                        f"<code>{esc(row.get('Error Code ID') or '')}</code>",
+                        esc(row.get("Stage") or ""),
+                        f"<code>{esc(row.get('Quick action kept') or '')}</code>",
+                        f"<code>{esc(row.get('Quick action dropped') or '')}</code>",
+                        esc(row.get("Dropped row message") or "") or blank(),
+                        (
+                            f"<code>{esc(row.get('Dropped row test cases') or '')}</code>"
+                            if (row.get("Dropped row test cases") or "").strip()
+                            else blank()
+                        ),
+                    ]
+                    for row in notes
+                ],
+                [
+                    "Error Code ID",
+                    "Stage",
+                    "Quick action kept",
+                    "Quick action dropped",
+                    "Dropped row message",
+                    "Dropped row test cases",
+                ],
+            )
+        )
+    else:
+        collision_html = "<p>No duplicate Error Code IDs within a stage block.</p>"
 
-def stat(n, label):
-    return f'<div class="stat"><div class="n">{n}</div><div class="l">{esc(label)}</div></div>'
-
-total = len(mlt) + len(l10) + len(l11)
-in_reg = sum(1 for r in mlt + l10 + l11 if r['in_registry'])
-
-CSS = """
-:root{--bg:#fff;--fg:#16181d;--muted:#606877;--line:#e3e6ec;--head:#f6f7f9;
---accent:#8a4b1e;--card:#fafbfc;--code:#f2f4f7}
-:root:not([data-theme=light]){}
-@media (prefers-color-scheme:dark){:root:not([data-theme=light]){
---bg:#111317;--fg:#e6e8ec;--muted:#98a1b0;--line:#282c34;--head:#191c22;
---accent:#e0a06a;--card:#171a20;--code:#1d2128}}
-:root[data-theme=dark]{--bg:#111317;--fg:#e6e8ec;--muted:#98a1b0;--line:#282c34;
---head:#191c22;--accent:#e0a06a;--card:#171a20;--code:#1d2128}
-*{box-sizing:border-box}
-body{margin:0;background:var(--bg);color:var(--fg);
-font:15px/1.55 -apple-system,BlinkMacSystemFont,"Segoe UI",Helvetica,Arial,sans-serif}
-.wrap{max-width:1180px;margin:0 auto;padding:40px 22px 96px}
-h1{font-size:1.85rem;margin:0 0 6px;letter-spacing:-.02em}
-h2{font-size:1.18rem;margin:44px 0 6px;padding-top:16px;border-top:1px solid var(--line);
-letter-spacing:-.01em}
-h3{font-size:1rem;margin:26px 0 6px}
-p{margin:8px 0}
-.sub{color:var(--muted);font-size:.92rem}
-a{color:var(--accent);text-decoration:none;border-bottom:1px solid transparent}
-a:hover{border-bottom-color:currentColor}
-code{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:.86em;
-background:var(--code);padding:1px 4px;border-radius:3px;white-space:nowrap}
-code.nm{white-space:normal;word-break:break-word}
-.scroll{overflow-x:auto;border:1px solid var(--line);border-radius:8px;margin:14px 0}
-table{border-collapse:collapse;width:100%;font-size:.83rem}
-th,td{text-align:left;vertical-align:top;padding:8px 10px;border-bottom:1px solid var(--line)}
-thead th{background:var(--head);position:sticky;top:0;font-weight:600;white-space:nowrap;
-font-size:.78rem;letter-spacing:.02em;color:var(--muted);text-transform:uppercase}
-tbody tr:last-child td{border-bottom:0}
-tbody tr:hover{background:var(--card)}
-td.msg{min-width:240px}
-td.id,td.num,td.who{white-space:nowrap}
-.none{color:var(--muted)}
-.badge{display:inline-block;padding:1px 6px;border-radius:10px;font-size:.74rem;
-font-weight:600;white-space:nowrap;border:1px solid var(--line);background:var(--card)}
-.badge.ver{background:var(--code)}
-.sev2{color:#b3261e;border-color:#b3261e55}
-.sev3{color:#6c5ce7;border-color:#6c5ce755}
-.sev4{color:#a86400;border-color:#a8640055}
-.sev5{color:#1d6fa5;border-color:#1d6fa555}
-.qa9{color:#b3261e;border-color:#b3261e55}
-.qa6{color:#1d7a4c;border-color:#1d7a4c55}
-.qa0{color:var(--muted)}
-.nyr{color:var(--muted);font-weight:500}
-.meta{background:var(--card);border:1px solid var(--line);border-radius:10px;
-padding:6px 18px;margin:20px 0 4px}
-.meta dl{display:grid;grid-template-columns:max-content 1fr;gap:0 20px;margin:0}
-.meta dt{color:var(--muted);font-size:.76rem;text-transform:uppercase;
-letter-spacing:.04em;font-weight:650;padding:7px 0;border-bottom:1px solid var(--line)}
-.meta dd{margin:0;padding:7px 0;font-size:.88rem;border-bottom:1px solid var(--line);
-overflow-wrap:anywhere}
-.meta dt:last-of-type,.meta dd:last-of-type{border-bottom:0}
-.meta .sub{font-size:.82rem}
-@media(max-width:560px){.meta dl{grid-template-columns:1fr;gap:0}
-.meta dt{padding-bottom:0;border-bottom:0}.meta dd{padding-top:2px}}
-.stats{display:flex;flex-wrap:wrap;gap:10px;margin:20px 0 4px}
-.stat{flex:1 1 120px;background:var(--card);border:1px solid var(--line);
-border-radius:8px;padding:12px 14px}
-.stat .n{font-size:1.5rem;font-weight:650;letter-spacing:-.02em}
-.stat .l{color:var(--muted);font-size:.78rem;text-transform:uppercase;letter-spacing:.03em}
-.legends{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:14px}
-.note{background:var(--card);border:1px solid var(--line);border-left:3px solid var(--accent);
-border-radius:6px;padding:10px 14px;font-size:.88rem;color:var(--muted);margin:14px 0}
-ul{margin:8px 0;padding-left:22px}
-li{margin:3px 0}
-footer{margin-top:56px;padding-top:16px;border-top:1px solid var(--line);
-color:var(--muted);font-size:.82rem}
-"""
-
-META_ROWS = [
-    ('Version', f'<strong>v{REPO_VERSION}</strong> of this page and repo &middot; '
-                f'source spreadsheet revision <strong>'
-                f'{rev_rows[-1][0].replace("<strong>", "").replace("</strong>", "")}'
-                f'</strong> &middot; every code at <code>version: 1</code>'),
-    ('Repository', f'<a href="{REPO_URL}">{REPO_URL.replace("https://", "")}</a>'),
-    ('Published at', f'<a href="{PAGES_URL}">{PAGES_URL.replace("https://", "").rstrip("/")}</a>'
-                     ' <span class="sub">(private &mdash; Etched org members)</span>'),
-    ('Original spreadsheet', f'<a href="{SHEET_URL}">_Etched Error Code</a> '
-                             '<span class="sub">(Google Sheets)</span>'),
-    ('Source of truth', f'<a href="{REGISTRY_URL}"><code>etched-ai/sw</code> &rarr; '
-                        '<code>host/system_test/error_codes/th_registry.yaml</code></a>'),
-    ('Slack', f'<a href="{SLACK_URL}">{SLACK_CHANNEL}</a> &middot; '
-              f'<a href="{SLACK_URL_2}">{SLACK_CHANNEL_2}</a>'),
-    ('Owner', '<code>supercomputing-sw</code>'),
-]
-
-meta_html = ('<div class="meta"><dl>' + ''.join(
-    f'<dt>{esc(k)}</dt><dd>{v}</dd>' for k, v in META_ROWS) + '</dl></div>')
-
-
-def section(title, anchor, body, intro=''):
-    return (f'<h2 id="{anchor}">{esc(title)}</h2>' +
-            (f'<p class="sub">{intro}</p>' if intro else '') + body)
-
-html_out = f"""<title>32x Error Code Registry</title>
-<style>{CSS}</style>
-<div class="wrap">
-<h1>32x Error Code Registry</h1>
-<p class="sub">Consolidated Etched test-harness error codes &mdash; MLT&nbsp;/&nbsp;1X, L10 and L11 &mdash;
+    legend = lambda pairs: [
+        [f"<code>{esc(key)}</code>", f"<code>{esc(value)}</code>"] for key, value in pairs
+    ]
+    download = kv_table(
+        [
+            [
+                '<a href="etched_error_code.xlsx"><strong>etched_error_code.xlsx</strong></a>',
+                "The source workbook &mdash; a mirror of the original spreadsheet. Same tabs "
+                "in the same order, same columns, same rows, nothing added or reordered. "
+                "This is the file to edit and commit.",
+                file_size(os.path.join(HERE, "etched_error_code.xlsx")),
+            ],
+            [
+                '<a href="etched_error_code_annotated.xlsx">etched_error_code_annotated.xlsx</a>',
+                "The joined view: version, original author, severity and quick-action names, "
+                "owner, <code>since</code>, and registry status, with the code tables refreshed "
+                "from the current registries.",
+                file_size(os.path.join(HERE, "etched_error_code_annotated.xlsx")),
+            ],
+            [
+                "<code>data/source/</code><br>"
+                '<a href="data/source/revision_history.csv">revision_history.csv</a><br>'
+                '<a href="data/source/mlt_1x.csv">mlt_1x.csv</a><br>'
+                '<a href="data/source/l10.csv">l10.csv</a><br>'
+                '<a href="data/source/l11.csv">l11.csv</a><br>'
+                '<a href="data/source/field_definitions.csv">field_definitions.csv</a><br>'
+                '<a href="data/source/dri_ownership.csv">dri_ownership.csv</a><br>'
+                '<a href="data/source/suite_run_log.csv">suite_run_log.csv</a>',
+                "Each source tab as CSV, verbatim &mdash; the diffable form of the workbook above.",
+                "7 files",
+            ],
+            [
+                "<code>data/</code><br>"
+                '<a href="data/revision_history.csv">revision_history.csv</a><br>'
+                '<a href="data/mlt_1x.csv">mlt_1x.csv</a><br>'
+                '<a href="data/l10.csv">l10.csv</a><br>'
+                '<a href="data/common.csv">common.csv</a><br>'
+                '<a href="data/l11.csv">l11.csv</a><br>'
+                '<a href="data/field_definitions.csv">field_definitions.csv</a><br>'
+                '<a href="data/error_id_encoding.csv">error_id_encoding.csv</a><br>'
+                '<a href="data/dri_ownership.csv">dri_ownership.csv</a><br>'
+                '<a href="data/source_data_notes.csv">source_data_notes.csv</a><br>'
+                '<a href="data/enum_legends.csv">enum_legends.csv</a>',
+                "Joined tabs as CSV. MLT / 1X, L10 and Common are refreshed from the registries. "
+                "L11 is the previous spreadsheet draft.",
+                "10 files",
+            ],
+            [
+                '<a href="sheet.md">sheet.md</a>',
+                "Verbatim export of the Google Sheet the earlier tables were built from.",
+                file_size(os.path.join(HERE, "sheet.md")),
+            ],
+            [
+                '<a href="th_registry.yaml">th_registry.yaml</a><br>'
+                '<a href="MLT/mlt_th_registry.yaml">MLT/mlt_th_registry.yaml</a><br>'
+                '<a href="L10/l10_th_registry.yaml">L10/l10_th_registry.yaml</a><br>'
+                '<a href="common_th_registry.yaml">common_th_registry.yaml</a>',
+                f"Snapshots of <code>host/system_test/error_codes</code> at <code>sw@{esc(sha)}</code>.",
+                "4 files",
+            ],
+        ],
+        ["File", "What it is", "Size"],
+    )
+    meta = (
+        '<div class="meta"><dl>'
+        f"<dt>Version</dt><dd><strong>v{REPO_VERSION}</strong> of this page and repo "
+        f"&middot; document revision <strong>{esc(doc_rev)}</strong> &middot; {version_note}</dd>"
+        f'<dt>Repository</dt><dd><a href="{REPO_URL}">{REPO_URL.replace("https://", "")}</a></dd>'
+        f'<dt>Published at</dt><dd><a href="{PAGES_URL}">'
+        f'{PAGES_URL.replace("https://", "").rstrip("/")}</a></dd>'
+        f'<dt>Source of truth</dt><dd><a href="{REGISTRY_URL}"><code>etched-ai/sw</code> '
+        "&rarr; <code>host/system_test/error_codes</code></a> "
+        f'<span class="sub">sw@{esc(sha)}</span></dd>'
+        f'<dt>Slack</dt><dd><a href="{SLACK_URL}">#error-code-define</a> &middot; '
+        f'<a href="{SLACK_URL_2}">#tiger-error-code</a></dd>'
+        "<dt>Owner</dt><dd><code>supercomputing-sw</code></dd>"
+        "</dl></div>"
+    )
+    page = (
+        "<title>32x Error Code Registry</title>\n<style>"
+        + page_css()
+        + "</style>\n<div class=\"wrap\">\n"
+        + f"""<h1>32x Error Code Registry</h1>
+<p class="sub">Consolidated Etched test-harness error codes &mdash; MLT&nbsp;/&nbsp;1X, L10, Common and L11 &mdash;
 with revision history and original author per code. Field names and enum values follow
 <code>th_registry.yaml</code> (TH Error Code Specification v0.3 &sect;7, &sect;11.1), the source of truth.</p>
 
-{meta_html}
+{meta}
 
 <div class="stats">
-{stat(total, 'error codes')}
-{stat(len(mlt), 'MLT / 1X')}
-{stat(len(l10), 'L10')}
-{stat(len(l11), 'L11')}
-{stat(in_reg, 'in th_registry.yaml')}
-{stat(len(DRI), 'test cases with DRI')}
+{stat(total, "error codes")}
+{stat(len(mlt), "MLT / 1X")}
+{stat(len(l10), "L10")}
+{stat(len(common), "Common")}
+{stat(len(l11), "L11")}
+{stat(in_reg, "in the registries")}
+{stat(len(dri), "test cases with DRI")}
 </div>
 
 <div class="note">
@@ -731,54 +1296,58 @@ never reuse a code &mdash; a change of meaning requires a new code. The <code>-S
 suffix carries severity and quick action; the stable identity is the <code>TH-&lt;BLOCK&gt;-&lt;NNNN&gt;</code> prefix.
 </div>
 
-{section('Download the source workbook', 'download',
-         kv_table([[a, b, c] for a, b, c in download_rows],
-                  ['File', 'What it is', 'Size']),
-         'Everything on this page is generated from the two snapshots at the bottom '
-         'of this list. Edit the workbook, commit it, re-run <code>gen.py</code>.')}
+{section("Download the source workbook", "download", download,
+         "Code tables below are refreshed from the registry snapshots. "
+         "The spreadsheet export and its verbatim CSVs are unchanged.")}
 
-{section('Revision history', 'revisions',
-         kv_table(rev_rows, ['Version', 'Comment', 'Author']),
-         'From the source spreadsheet, oldest revision first.')}
+{section("Revision history", "revisions",
+         kv_table(rev_rows, ["Version", "Comment", "Author"]),
+         "From the source spreadsheet, oldest revision first.")}
 
-{section('Error code fields', 'fields',
-         kv_table(field_rows, ['Field', 'Description']))}
+{section("Error code fields", "fields",
+         kv_table(field_rows, ["Field", "Description"]))}
 
-{section('Error ID encoding (L11 EC-* space)', 'encoding',
-         kv_table(bit_rows, ['Char #', 'Describe', 'Define']),
-         'Character layout of the 12-hex-digit <code>EC-</code> identifier used by the L11 block.')}
+{section("Error ID encoding (L11 EC-* space)", "encoding",
+         kv_table(bit_rows, ["Char #", "Describe", "Define"]),
+         "Character layout of the 12-hex-digit <code>EC-</code> identifier used by the L11 block.")}
 
-{section('Enum legends', 'legends',
-         '<div class="legends"><div><h3>Category</h3>' +
-         kv_table(cat_rows, ['Value', 'Name']) + '</div><div><h3>Severity</h3>' +
-         kv_table(sev_rows, ['Value', 'Name']) + '</div><div><h3>Quick action</h3>' +
-         kv_table(qa_rows, ['Value', 'Name']) + '</div></div>',
-         'Values as used by <code>category</code>, <code>severity</code> and '
-         '<code>quick_action</code> in <code>th_registry.yaml</code>.')}
+{section("Enum legends", "legends",
+         '<div class="legends"><div><h3>Category</h3>'
+         + kv_table(legend(sorted(CATEGORY.items())), ["Value", "Name"])
+         + "</div><div><h3>Severity</h3>"
+         + kv_table(legend(sorted(SEVERITY.items())), ["Value", "Name"])
+         + "</div><div><h3>Quick action</h3>"
+         + kv_table(legend(sorted(QUICK_ACTION.items())), ["Value", "Name"])
+         + "</div></div>",
+         "Values as used by <code>category</code>, <code>severity</code> and "
+         "<code>quick_action</code> in the registries.")}
 
-{section('MLT / 1X Module Test codes', 'mlt', code_table(mlt),
-         f'Introduced in sheet revision 0.2. {len(mlt)} codes.')}
+{section("MLT / 1X Module Test codes", "mlt", code_table(mlt, dri),
+         f"Refreshed from <code>MLT/mlt_th_registry.yaml</code> and 1X-only leftovers. {len(mlt)} codes.")}
 
-{section('L10 Test codes', 'l10', code_table(l10, show_packed=True),
-         f'Introduced in sheet revision 0.3, with the packed 32-bit integer form. {len(l10)} codes.')}
+{section("L10 Test codes", "l10", code_table(l10, dri, show_packed=True),
+         f"Refreshed from <code>L10/l10_th_registry.yaml</code>, with the packed 32-bit integer form. {len(l10)} codes.")}
 
-{section('L11 Test codes', 'l11', code_table(l11, show_root=True),
-         f'Draft &mdash; L11 is still in progress (Slack #error-code-define, 2026-08-19). {len(l11)} codes.')}
+{section("Common codes", "common", code_table(common, dri, show_packed=True),
+         f"Cross-station codes from <code>common_th_registry.yaml</code>. {len(common)} codes.")}
 
-{section('Test case DRI ownership', 'dri',
-         kv_table(dri_table_rows, ['Test case', 'DRI 1', 'DRI 2', 'Status', 'PR']),
-         'DRI 1 of a code&rsquo;s primary test case is what the <em>Original Author</em> column '
-         'above resolves to; codes with no DRI listed fall back to the spec author '
-         f'({esc(SPEC_AUTHOR)}). Hover an author cell to see which basis was used.')}
+{section("L11 Test codes", "l11", code_table(l11, dri, show_root=True),
+         f"{len(l11)} codes.")}
 
-{section('Source data notes', 'notes', collision_html,
-         'Points where the spreadsheet needed a judgment call to normalize.')}
+{section("Test case DRI ownership", "dri",
+         kv_table(dri_rows, ["Test case", "DRI 1", "DRI 2", "Status", "PR"]),
+         "DRI 1 of a code&rsquo;s primary test case is what the <em>Original Author</em> column "
+         "above resolves to; codes with no DRI listed fall back to the spec author "
+         f"({esc(SPEC_AUTHOR)}). Hover an author cell to see which basis was used.")}
+
+{section("Source data notes", "notes", collision_html,
+         "Points where the spreadsheet needed a judgment call to normalize.")}
 
 <h2 id="sources">Sources &amp; provenance</h2>
 <ul>
-<li>Source of truth &mdash; <a href="https://github.com/etched-ai/sw/blob/master/host/system_test/error_codes/th_registry.yaml"><code>etched-ai/sw &rarr; host/system_test/error_codes/th_registry.yaml</code></a> ({len(reg)} codes; snapshot committed alongside this page).</li>
-<li>Spreadsheet &mdash; <a href="https://docs.google.com/spreadsheets/d/1zKcxEXyYFLAQkI0AnVtZnSQ7Z-sxGqzGBpc9-0qhrqk/edit?gid=1353335746">_Etched Error Code</a> (revision {esc(rev_rows[-1][0].replace('<strong>','').replace('</strong>',''))}).</li>
-<li>Discussion &mdash; Slack <a href="https://etchedai.slack.com/archives/C0B299EA7UK">#error-code-define</a>; <a href="https://etchedai.slack.com/archives/C0BMBRF327R">#tiger-error-code</a>.</li>
+<li>Source of truth &mdash; <a href="{REGISTRY_URL}"><code>etched-ai/sw &rarr; host/system_test/error_codes</code></a> ({in_reg} codes at <code>sw@{esc(sha)}</code>; snapshots committed alongside this page).</li>
+<li>Spreadsheet &mdash; <a href="{SHEET_URL}">_Etched Error Code</a> (L11 and the verbatim export, revision 0.3).</li>
+<li>Discussion &mdash; Slack <a href="{SLACK_URL}">#error-code-define</a>; <a href="{SLACK_URL_2}">#tiger-error-code</a>.</li>
 <li>Spec docs &mdash; <a href="https://docs.google.com/document/d/19p0DrsD3fMRnOJajcB390yxke-aAjlfLj-Dbwmoktiw/edit">Error code format definition</a>, <a href="https://docs.google.com/document/d/1rj0vtUVVIzQ_QMn-OBfLXeXAmq5mkb8G7hubHn5DQNI/edit">error-event revision</a>.</li>
 </ul>
 
@@ -790,16 +1359,156 @@ registry plus the spreadsheet &mdash; regenerate rather than hand-edit.
 </div>
 
 <footer>
-v{REPO_VERSION} &middot; generated by <code>gen.py</code> from <code>th_registry.yaml</code> + the _Etched Error Code sheet.
+v{REPO_VERSION} &middot; generated by <code>gen.py</code> from the error-code registries at <code>sw@{esc(sha)}</code>.
 Owner of the code space: <code>supercomputing-sw</code>. Codes marked
-<span class="badge nyr">sheet only</span> exist in the spreadsheet but are not yet in
-<code>th_registry.yaml</code>.
+<span class="badge nyr">sheet only</span> exist in the spreadsheet but are not yet in a registry.
 </footer>
 </div>
 """
+    )
+    with open(os.path.join(HERE, "index.html"), "w", encoding="utf-8", newline="\n") as handle:
+        handle.write(page)
 
-os.makedirs(os.path.dirname(OUT), exist_ok=True)
-open(OUT, 'w').write(html_out)
-print(f'wrote {OUT}  ({len(html_out)} bytes)')
-print(f'  MLT/1X {len(mlt)}  L10 {len(l10)}  L11 {len(l11)}  total {total}  in-registry {in_reg}')
-print(f'  DRI entries {len(DRI)}  revisions {len(rev_rows)}  field defs {len(field_rows)}  bitfield cols {len(bit_rows)}')
+
+def write_sheet(new_rows):
+    src = os.path.join(OLD, "sheet.md")
+    if os.path.isfile(src):
+        copy_file(src, os.path.join(HERE, "sheet.md"))
+        return
+    lines = [
+        "# Error codes refreshed from system_test/error_codes",
+        "",
+        "L11 remains the previous spreadsheet draft (no L11 registry).",
+        "",
+    ]
+    for title, catalog in (
+        ("MLT / 1X Module Test", ("mlt", "1x")),
+        ("L10 Test", ("l10",)),
+        ("Common", ("common",)),
+    ):
+        rows = [row for row in new_rows if row["catalog"] in catalog]
+        rows.sort(key=lambda row: row["full_id"])
+        lines.append(f"## {title}")
+        lines.append("")
+        lines.append("| Error Code ID | Name | Message | Component | Test Case |")
+        lines.append("| --- | --- | --- | --- | --- |")
+        for row in rows:
+            message = row["message"].replace("|", "\\|")
+            lines.append(
+                f"| {row['full_id']} | {row['name']} | {message} | {row['component']} | "
+                f"{', '.join(row['test_cases'])} |"
+            )
+        lines.append("")
+    with open(os.path.join(HERE, "sheet.md"), "w", encoding="utf-8") as handle:
+        handle.write("\n".join(lines))
+
+
+def write_xlsx(new_rows, diff_path):
+    try:
+        from openpyxl import Workbook
+        from openpyxl.styles import Alignment, Font, PatternFill
+        from openpyxl.utils import get_column_letter
+    except ImportError:
+        print("openpyxl not installed; workbooks skipped")
+        return False
+
+    def add_sheet(workbook, name, header, rows):
+        sheet = workbook.create_sheet(name[:31])
+        sheet.append(header)
+        for row in rows:
+            sheet.append(["" if cell is None else cell for cell in row])
+        fill = PatternFill("solid", fgColor="3C4450")
+        font = Font(bold=True, color="FFFFFF")
+        for cell in sheet[1]:
+            cell.fill = fill
+            cell.font = font
+            cell.alignment = Alignment(vertical="center", wrap_text=True)
+        sheet.freeze_panes = "A2"
+        if rows:
+            sheet.auto_filter.ref = f"A1:{get_column_letter(len(header))}{len(rows) + 1}"
+        for index, title in enumerate(header, start=1):
+            width = min(max(len(str(title)), 12), 48)
+            sheet.column_dimensions[get_column_letter(index)].width = width
+        return sheet
+
+    groups = (
+        ("MLT 1X", [row for row in new_rows if row["catalog"] in ("mlt", "1x")]),
+        ("L10", [row for row in new_rows if row["catalog"] == "l10"]),
+        ("Common", [row for row in new_rows if row["catalog"] == "common"]),
+    )
+    plain = Workbook()
+    plain.remove(plain.active)
+    joined = Workbook()
+    joined.remove(joined.active)
+    for name, rows in groups:
+        rows = sorted(rows, key=lambda row: row["full_id"])
+        body = [joined_row(row) for row in rows]
+        add_sheet(plain, name, JOINED_COLS, body)
+        add_sheet(joined, name, JOINED_COLS, body)
+    with open(diff_path, newline="", encoding="utf-8-sig") as handle:
+        diff_rows = list(csv.reader(handle))
+    if diff_rows:
+        add_sheet(joined, "Comparison", diff_rows[0], diff_rows[1:])
+    plain_src = os.path.join(OLD, "etched_error_code.xlsx")
+    if os.path.isfile(plain_src):
+        copy_file(plain_src, os.path.join(HERE, "etched_error_code.xlsx"))
+    else:
+        plain.save(os.path.join(HERE, "etched_error_code.xlsx"))
+    joined.save(os.path.join(HERE, "etched_error_code_annotated.xlsx"))
+    return True
+
+
+def write_readme(sha, new_rows, summary_pairs):
+    counts = {row[7]: row[9] for row in summary_pairs}
+    text = f"""# 32x-error-code refresh
+
+Local refresh of the files in `32x-error-code`, generated from
+`etched-ai/sw` `host/system_test/error_codes` at `{sha}`.
+
+| Catalog | File | Codes |
+| --- | --- | --- |
+| MLT / 1X | `MLT/mlt_th_registry.yaml` plus 1X-only leftovers in `th_registry.yaml` | {sum(1 for row in new_rows if row['catalog'] in ('mlt', '1x'))} |
+| L10 | `L10/l10_th_registry.yaml` | {sum(1 for row in new_rows if row['catalog'] == 'l10')} |
+| Common | `common_th_registry.yaml` | {sum(1 for row in new_rows if row['catalog'] == 'common')} |
+| L11 | previous spreadsheet draft | {counts.get('l11_carried_forward_not_in_registry', '')} (not in system_test) |
+
+`error_code_update_comparison.csv` is the field-level diff against
+`32x-error-code/data/{{mlt_1x,l10,l11}}.csv`.
+
+- `added` / `removed` — identity appeared or disappeared
+- `moved` — same identity, different station table
+- `updated` — a field changed (`field`, `old_value`, `new_value`)
+- `retired` — registry marks `retired: true`
+- `summary` — counts at the top of the file
+
+L11 rows are carried forward unchanged. Identity segments stay immutable.
+Regenerate with `python gen.py` from this directory.
+"""
+    with open(os.path.join(HERE, "README.md"), "w", encoding="utf-8") as handle:
+        handle.write(text)
+
+
+def main():
+    dri = load_dri()
+    old_rows = load_old_codes()
+    new_rows = load_new()
+    annotate(new_rows, old_rows, dri)
+    diffs = build_diff(old_rows, new_rows)
+    os.makedirs(os.path.join(HERE, "data", "source"), exist_ok=True)
+    copy_registries()
+    write_tables(new_rows)
+    revisions, sha = write_static()
+    diff_path, summaries = write_comparison(diffs, old_rows, new_rows)
+    write_sheet(new_rows)
+    wrote_xlsx = write_xlsx(new_rows, diff_path)
+    write_html(new_rows, revisions, sha, summaries)
+    write_readme(sha, new_rows, summaries)
+    print(f"sha {sha}")
+    print(f"new codes {len(new_rows)}  diff rows {len(diffs)}  xlsx {wrote_xlsx}")
+    print(f"comparison {diff_path}")
+    for row in summaries:
+        print(f"  {row[7]}: {row[9]}")
+
+
+if __name__ == "__main__":
+    main()

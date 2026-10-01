@@ -1,0 +1,627 @@
+# Common TH error-code registry (TH Error Code Specification v0.3 §7, §11.1).
+# Source of truth for codegen once CI lands; common_error_codes.py must stay
+# in sync (common_error_codes_test enforces it).
+#
+# Identity segments (e.g. TH-HAR-0001) are immutable: never renumber, never
+# reuse. A change of meaning requires a new code.
+#
+# Scope: codes that are not owned by a single station -- harness-level
+# TH-HAR codes, station host/fixture TH-ENV codes, shared Ethernet configuration
+# codes, and the station PSU code shared by SLT and 1X module testing.
+# Station-specific codes belong in th_registry.yaml (1X module test) or
+# L10/l10_th_registry.yaml.
+#
+# A record here may also appear in a station registry while that station's
+# consumers are being drained; the ErrorCodeDef must be identical.
+# catalog_consistency_test enforces that across catalogs.
+- error_code: TH-C2C-0010
+  name: C2C_CONFIG_REQUEST_FAILED
+  version: 1
+  category: 7  # CATEGORY_SOFTWARE
+  severity: 4  # ERROR_TRIAGE
+  quick_action: 9  # QA_ESCALATE
+  component: C2C.SOHU_SERDES
+  test_cases: [C2cConfigureMultiChipTestCase]
+  disposition: ERROR
+  retryable: false
+  max_auto_retry: 0
+  description: >
+    Firmware rejected the Ethernet configuration request or the configuration
+    helper received a non-OK firmware status. No FLR is attempted;
+    earlier chips may already have stored the override.
+  probable_causes:
+    - Firmware rejected or could not store the requested MAC/PHY configuration
+    - Host and firmware configuration support differs
+  capture:
+    - suite_run_url
+    - Requested FEC mode and failing device index from the test message
+    - Per-test log with the full configuration exception traceback
+    - "unit_sn, fw_version, harness_version, station_id, timestamp"
+  repair_actions:
+    - {step: 1, who: "engineer", action: "Inspect the firmware status and host/firmware compatibility; common-reset the tray before retrying to clear partially stored overrides.", retest: "affected_subset", ticket_template: "ETCH"}
+  owner: supercomputing-sw
+  doc_url: ""
+  since: unreleased
+  suspected_components: [SOHU_FIRMWARE]
+  vendor_error_id: []
+  jira_component: ETCH / l10-test
+- error_code: TH-C2C-0011
+  name: C2C_CONFIG_FLR_FAILED
+  version: 1
+  category: 7  # CATEGORY_SOFTWARE
+  severity: 4  # ERROR_TRIAGE
+  quick_action: 9  # QA_ESCALATE
+  component: C2C.SOHU_SERDES
+  test_cases: [C2cConfigureMultiChipTestCase]
+  disposition: ERROR
+  retryable: false
+  max_auto_retry: 0
+  description: >
+    All Ethernet override requests were stored, but the FLR helper returned an
+    error while applying them. FEC readback was not attempted, so the requested
+    configuration is unverified and this code alone does not diagnose hardware.
+  probable_causes:
+    - RPC proxy or PCIe reset operation failed
+    - Firmware did not become pingable within the post-FLR recovery timeout
+  capture:
+    - suite_run_url
+    - Requested FEC mode, failing device index, and FLR helper error from the test message
+    - Per-test log and RPC proxy diagnostics
+    - "unit_sn, fw_version, harness_version, station_id, timestamp"
+  repair_actions:
+    - {step: 1, who: "engineer", action: "Inspect the FLR error, proxy health, and firmware recovery; common-reset the tray before rerunning configuration and link validation.", retest: "affected_subset", ticket_template: "ETCH"}
+  owner: supercomputing-sw
+  doc_url: ""
+  since: unreleased
+  suspected_components: [RPC_PROXY, SOHU_FIRMWARE, PCIE]
+  vendor_error_id: []
+  jira_component: ETCH / l10-test
+- error_code: TH-C2C-0012
+  name: C2C_CONFIG_READBACK_MISMATCH
+  version: 1
+  category: 5  # CATEGORY_CONFIG
+  severity: 4  # ERROR_TRIAGE
+  quick_action: 9  # QA_ESCALATE
+  component: C2C.SOHU_SERDES
+  test_cases: [C2cConfigureMultiChipTestCase]
+  disposition: FAILED
+  retryable: false
+  max_auto_retry: 0
+  description: >
+    After storing the override and completing FLR, one or more datalink pairs
+    reported an unset FEC mode or a mode different from the requested value.
+    All readback mismatches are included in the test message. This proves a
+    configuration mismatch, not a link-quality or hardware failure.
+  probable_causes:
+    - Firmware did not apply the requested mode to every datalink pair
+    - A reset or another configuration request replaced the override
+  capture:
+    - suite_run_url
+    - Device index, datalink pair, expected mode, and actual mode from the test message
+    - Per-test log and firmware version
+    - "unit_sn, harness_version, station_id, timestamp"
+  repair_actions:
+    - {step: 1, who: "engineer", action: "Compare expected and actual modes, inspect firmware configuration application and competing resets, then rerun configuration and link validation.", retest: "affected_subset", ticket_template: "ETCH"}
+  owner: supercomputing-sw
+  doc_url: ""
+  since: unreleased
+  suspected_components: [SOHU_FIRMWARE]
+  vendor_error_id: []
+  jira_component: ETCH / l10-test
+
+# Allocation only: the sheet lists host_boot against this row, but no such test
+# case exists in the harness yet. Emission lands with that test case; the code is
+# allocated now so the identity is reserved and the SOP is reviewable.
+- error_code: TH-ENV-0001
+  name: HOST_NOT_REACHABLE_AFTER_BOOT
+  version: 1
+  category: 1  # CATEGORY_NETWORK
+  severity: 4  # ERROR_TRIAGE
+  quick_action: 9  # QA_ESCALATE -- retry cannot fix station cabling
+  component: 1X.ENV.STATION_HOST
+  test_cases: []  # host_boot not yet implemented in the harness
+  disposition: ERROR  # test-system problem; excluded from module yield
+  retryable: false
+  max_auto_retry: 0
+  description: >
+    The station host or its BMC did not answer ping or SSH after boot, so no
+    module test could start. This is a test-system condition, not a module
+    verdict.
+  probable_causes:
+    - Station host powered off or stuck before the OS came up
+    - BMC network or management cabling fault
+    - sshd not running or host key changed on the station host
+    - Station host IP/DHCP reservation changed
+  capture:
+    - suite_run_url
+    - ping and ssh transcript for the station host and its BMC
+    - station_id, harness_version, operator_id, timestamp
+  repair_actions:
+    - {step: 1, who: operator, action: "Connect a monitor to the Devkit and verify that the system boots successfully, then try ping with host / BMC."}
+    - {step: 2, who: operator, action: "Collect the suite/test logs and artifacts for this failure.", est_time_min: 5}
+    - {step: 3, who: escalate, action: "Escalate to Etched engineer with the collected logs.", ticket_template: ETCH}
+  owner: supercomputing-sw
+  doc_url: https://github.com/etched-ai/sw/blob/master/host/system_test/error_codes/doc/Harness.md#TH-ENV-0001
+  since: harness 2026.216
+  suspected_components: []
+  vendor_error_id: []
+  jira_component: ETCH / MLT
+- error_code: TH-ENV-0002
+  name: STATION_FIXTURE_SETUP_CHECK_FAILED
+  version: 1
+  category: 5  # CATEGORY_CONFIG
+  severity: 4  # ERROR_TRIAGE
+  quick_action: 9  # QA_ESCALATE
+  component: 1X.ENV.STATION_FIXTURE
+  test_cases: [ChromaTelemetryCheckTestCase, EvalBoardPowerTestCase, VfioProxyVersionTestCase, CheckPexFirmwareVersionTestCase]
+  disposition: ERROR
+  retryable: false
+  max_auto_retry: 0
+  description: >
+    Station fixture/setup check failed (Chroma telemetry / eval board power /
+    vfio-proxy version query or mismatch / PEX version).
+  probable_causes:
+    - Station fixture or setup is not ready for module testing
+    - vfio-proxy gRPC unreachable or reporting unexpected version
+  capture:
+    - suite_run_url
+    - per-test log and transcript
+    - harness_version, station_id, operator_id, timestamp
+  repair_actions:
+    - {step: 1, who: operator, action: "Collect the suite/test logs and artifacts for this failure.", est_time_min: 5}
+    - {step: 2, who: escalate, action: "Escalate to Etched engineer with the collected logs. DO NOT retest.", ticket_template: ETCH}
+  owner: supercomputing-sw
+  doc_url: https://github.com/etched-ai/sw/blob/master/host/system_test/error_codes/doc/ChromaTelemetryCheckTestCase.md#TH-ENV-0002
+  since: harness 2026.216
+  suspected_components: []
+  vendor_error_id: []
+  jira_component: ETCH / MLT
+- error_code: TH-ENV-0003
+  name: PLX_DAEMON_NO_PEX_SWITCHES
+  version: 1
+  category: 5  # CATEGORY_CONFIG
+  severity: 4  # ERROR_TRIAGE
+  quick_action: 9  # QA_ESCALATE
+  component: 1X.ENV.PEX_SWITCH
+  test_cases: [CheckPexFirmwareVersionTestCase]
+  disposition: ERROR
+  retryable: false
+  max_auto_retry: 0
+  description: PLX daemon reported no PEX switches.
+  probable_causes:
+    - VBB MCU firmware is not updated to the required version
+    - PEX switches are unavailable to the PLX daemon
+  capture:
+    - suite_run_url
+    - per-test log and transcript
+    - VBB MCU firmware version
+    - harness_version, station_id, operator_id, timestamp
+  repair_actions:
+    - {step: 1, who: operator, action: "Collect the suite/test logs and artifacts for this failure.", est_time_min: 5}
+    - {step: 2, who: escalate, action: "Escalate to Etched engineer with the collected logs. DO NOT retest.", ticket_template: ETCH}
+  owner: supercomputing-sw
+  doc_url: https://github.com/etched-ai/sw/blob/master/host/system_test/error_codes/doc/CheckPexFirmwareVersionTestCase.md#TH-ENV-0003
+  since: harness 2026.216
+  suspected_components: []
+  vendor_error_id: []
+  jira_component: ETCH / l10-test  # known bugs: ETCH-35552
+
+# Host-side setup steps (module reload, PCIe teardown, Kayak RAID remount,
+# sysfs driver parameters, log-reader activation) run against the station
+# host, not the module: a failure says nothing about the DUT, so disposition
+# ERROR keeps it out of module yield.
+- error_code: TH-ENV-0004
+  name: HOST_SETUP_STEP_FAILED
+  version: 1
+  category: 5  # CATEGORY_CONFIG
+  severity: 4  # ERROR_TRIAGE
+  quick_action: 9  # QA_ESCALATE
+  component: 1X.ENV.HOST_SETUP
+  test_cases: [ReloadKernelModuleTestCase, PcieTeardownTestCase, PcieRescanTestCase, SetSkipFlrOnOpenCloseTestCase, SohuLogReaderActivateTestCase, LogReaderCaptureTestCase, PublishBootloaderTypeTestCase, KayakRaidRemountTestCase]
+  disposition: ERROR  # station host environment problem; excluded from DUT yield
+  retryable: false
+  max_auto_retry: 0
+  description: >
+    A host driver/setup utility step failed: a kernel module reload, PCIe
+    teardown or bus rescan, Kayak RAID remount, sohu_mdev sysfs parameter write,
+    or log-reader activation returned non-zero on the station host.
+  probable_causes:
+    - sohu_mdev kernel module not loaded, or loaded at a version without the expected parameter
+    - Missing sudo/permissions for the setup command on the station host
+    - Earlier setup step in the suite failed and left the host in an unexpected state
+    - Host tooling (driver package, log reader) not provisioned on this station
+    - /sys/bus/pci/rescan write failed
+    - Kayak RAID0 at /data/kayak failed to reassemble or remount after PEX teardown
+  capture:
+    - suite_run_url
+    - exact command, exit code, stdout and stderr of the failing setup step
+    - lsmod / modinfo output for sohu_mdev
+    - dmesg excerpt for the run window
+    - harness_version, station_id, operator_id, timestamp
+  repair_actions:
+    - {step: 1, who: operator, action: "Collect the suite/test logs and artifacts for this failure.", est_time_min: 5}
+    - {step: 2, who: escalate, action: "Escalate to Etched engineer with the collected logs. DO NOT retest.", ticket_template: ETCH}
+  owner: supercomputing-sw
+  doc_url: https://github.com/etched-ai/sw/blob/master/host/system_test/error_codes/doc/ReloadKernelModuleTestCase.md#TH-ENV-0004
+  since: harness 2026.216
+  suspected_components: []
+  vendor_error_id: []
+  jira_component: ETCH / 1x-module-test
+- error_code: TH-HAR-0001
+  name: TEST_TIMEOUT
+  version: 1
+  category: 7  # CATEGORY_SOFTWARE — harness-terminated; DUT hang not proven
+  severity: 4  # ERROR_TRIAGE — needs engineering disposition
+  quick_action: 0  # QA_NO_ACT — preserve state; reboot/retry decisions are human
+  component: L10.HAR.HARNESS
+  test_cases: []  # harness-level; applies to any test case
+  disposition: ABORTED  # run stopped before a verdict
+  retryable: false
+  max_auto_retry: 0
+  description: >
+    A test case exceeded its configured timeout and was terminated by the
+    harness before producing a verdict.
+  probable_causes:
+    - DUT hang or severe slowdown under the test workload
+    - Test timeout configured too low for this platform
+    - Harness/executor stall (e.g. remote connection loss)
+  capture:
+    - suite_run_url
+    - per-test log and transcript
+    - configured timeout and measured duration
+    - harness_version, station_id, operator_id, timestamp
+  repair_actions:
+    - {step: 1, who: operator, action: "Rerun the affected subset once to check reproducibility.", retest: affected_subset, est_time_min: 10}
+    - {step: 2, who: escalate, action: "Route to engineering triage with the per-test log and timeout configuration.", retest: n/a, ticket_template: ETCH}
+  owner: supercomputing-sw
+  doc_url: https://github.com/etched-ai/sw/blob/master/host/system_test/error_codes/doc/Harness.md#TH-HAR-0001
+  since: harness 2026.216
+  suspected_components: []
+  vendor_error_id: []
+  jira_component: ETCH / l10-test
+
+# Test invoked with invalid/unsupported arguments: a suite-configuration
+# problem, not a DUT verdict.
+- error_code: TH-HAR-0002
+  name: TEST_ARGS_INVALID
+  version: 1
+  category: 5  # CATEGORY_CONFIG
+  severity: 5  # ERROR_CONFIG — resolvable by fixing the suite configuration
+  quick_action: 9  # QA_ESCALATE — retry cannot fix a config error
+  component: L10.HAR.HARNESS
+  test_cases: [SohuSecureBootRecoveryUpdateTestCase, ServerNestedTestCase, SohuSnapTestCase, VfioProxyVersionTestCase, SohuWeightLoadTestCase, SltModuleNestedTestCase]  # reusable by any test that validates args
+  disposition: ERROR  # suite-config problem; excluded from DUT yield
+  retryable: false
+  max_auto_retry: 0
+  description: >
+    A test case was invoked with invalid or unsupported arguments (e.g.
+    unexpected kwargs, unsupported mode) and rejected the run before
+    touching the DUT.
+  probable_causes:
+    - Suite YAML passes arguments the test does not accept
+    - Suite YAML requests a mode/path the test does not support
+  capture:
+    - suite_run_url
+    - the offending args from the per-test log
+    - harness_version, station_id, timestamp
+  repair_actions:
+    - {step: 1, who: engineer, action: "Fix the suite YAML for this test; do not route the unit to rework"}
+  owner: supercomputing-sw
+  doc_url: https://github.com/etched-ai/sw/blob/master/host/system_test/error_codes/doc/SohuSecureBootRecoveryUpdateTestCase.md#TH-HAR-0002
+  since: harness 2026.216
+  suspected_components: []
+  vendor_error_id: []
+  jira_component: ETCH / l10-test
+
+# A tool, binary, or data file the test depends on is missing on the test
+# system: a deployment/provisioning gap, not a DUT verdict.
+- error_code: TH-HAR-0003
+  name: TEST_DEPENDENCY_UNAVAILABLE
+  version: 1
+  category: 5  # CATEGORY_CONFIG — deployment/provisioning gap
+  severity: 5  # ERROR_CONFIG — resolvable by fixing the deployment
+  quick_action: 9  # QA_ESCALATE — retry cannot materialize a missing file
+  component: L10.HAR.HARNESS
+  test_cases: [SohuSecureBootRecoveryUpdateTestCase, SohuWeightLoadTestCase, VbbFirmwareUpdateTestCase]  # reusable by any test with external dependencies
+  disposition: ERROR  # test-system problem; excluded from DUT yield
+  retryable: false
+  max_auto_retry: 0
+  description: >
+    A tool, binary, or data file the test depends on (e.g. the pldm_ua
+    binary) is missing on the test system, so the test could not perform
+    its function. Distinct from TH-CPU-0003, which covers a tool missing
+    on the DUT. Also covers missing VBB flash runfiles / nm toolchain /
+    version_info artifacts for fixture firmware update and chipsim
+    /mnt/weights 9p mount failure for Kayak workloads that never start.
+  probable_causes:
+    - Test package/runfiles deployment gap on the station
+    - Harness release missing a data dependency
+  capture:
+    - suite_run_url
+    - the missing path from the per-test log
+    - harness_version, station_id, timestamp
+  repair_actions:
+    - {step: 1, who: engineer, action: "Fix the station deployment / harness package; do not route the unit to rework"}
+  owner: supercomputing-sw
+  doc_url: https://github.com/etched-ai/sw/blob/master/host/system_test/error_codes/doc/SohuSecureBootRecoveryUpdateTestCase.md#TH-HAR-0003
+  since: harness 2026.216
+  suspected_components: []
+  vendor_error_id: []
+  jira_component: ETCH / l10-test
+- error_code: TH-HAR-0004
+  name: NESTED_SUITE_ORCHESTRATION_FAILED
+  version: 1
+  category: 5  # CATEGORY_CONFIG
+  severity: 4  # ERROR_TRIAGE
+  quick_action: 9  # QA_ESCALATE
+  component: 1X.HAR.NESTED_SUITE
+  test_cases: [ServerNestedTestCase, SltModuleNestedTestCase]
+  disposition: ERROR  # test-system problem; excluded from module yield
+  retryable: false
+  max_auto_retry: 0
+  description: >
+    A nested suite failed to launch or complete orchestration (container
+    image load, API ready/config, abort/shutdown, missing kv_store inputs,
+    or resource wiring). Child test failures carry their own codes; the
+    wrapper never mints this code for an inner suite that ran and failed.
+    Unpopulated chip slots on SltModuleNestedTestCase remain SKIP (not
+    this code).
+  probable_causes:
+    - Suite configuration or resource wiring error in the nested wrapper
+    - Child suite could not be launched at all
+    - Container runtime / image load or inner harness API failure
+  capture:
+    - suite_run_url
+    - per-test log and transcript
+    - unit_sn, fw_version, harness_version, station_id, operator_id, timestamp
+  repair_actions:
+    - {step: 1, who: operator, action: "Check suite config/resources; wrapper must propagate the first/most-severe child error code - never mint duplicate codes for child failures (test-system ERROR - excluded from yield)"}
+  owner: supercomputing-sw
+  doc_url: https://github.com/etched-ai/sw/blob/master/host/system_test/error_codes/doc/ServerNestedTestCase.md#TH-HAR-0004
+  since: harness 2026.216
+  suspected_components: []
+  vendor_error_id: []
+  jira_component: ETCH / MLT
+- error_code: TH-HAR-0005
+  name: TEST_TOOL_EXECUTION_FAILED
+  version: 1
+  category: 7  # CATEGORY_SOFTWARE
+  severity: 4  # ERROR_TRIAGE
+  quick_action: 6  # QA_RETRY
+  component: L10.HAR.HARNESS
+  test_cases: [IoStress, ExecBinaryTestCase, CpldDiagnosticsRemoteTestCase]
+  disposition: ERROR
+  retryable: true
+  max_auto_retry: 1
+  description: >
+    A test-owned command or binary failed to execute and did not produce a
+    domain-specific DUT verdict.
+  probable_causes:
+    - "Test-system, station, or configuration problem covering Harness"
+    - "Missing, malformed, or unreachable input required by TEST_TOOL_EXECUTION_FAILED"
+    - Suite or image provisioning gap rather than a DUT hardware fault
+  capture:
+    - suite_run_url
+    - "failing test case(s): IoStress, ExecBinaryTestCase, CpldDiagnosticsRemoteTestCase"
+    - per-test log and transcript
+    - "unit_sn, bios/fw_version, harness_version, station_id, operator_id, timestamp"
+  repair_actions:
+    - {step: 1, who: "engineer", action: "Fix the station, image, or suite configuration; do NOT route the unit to rework.", retest: "affected_subset", est_time_min: 15, ticket_template: "ETCH"}
+  owner: supercomputing-sw
+  doc_url: https://docs.google.com/document/d/1-_YC_cXvi3FtKd51jIetY9pER8JtCxH5dBE9UvndZWU/edit
+  since: harness 2026.226
+  suspected_components: [HARNESS]
+  vendor_error_id: []
+  jira_component: ETCH / l10-test
+- error_code: TH-HAR-0006
+  name: TEST_METRICS_PARSE_FAILED
+  version: 1
+  category: 7  # CATEGORY_SOFTWARE
+  severity: 4  # ERROR_TRIAGE
+  quick_action: 9  # QA_ESCALATE
+  component: L10.HAR.HARNESS
+  test_cases: [IoStress, ExecBinaryTestCase]
+  disposition: ERROR
+  retryable: false
+  max_auto_retry: 0
+  description: >
+    A test tool completed without complete, parseable metrics needed to
+    determine the result.
+  probable_causes:
+    - "Test-system, station, or configuration problem covering Harness"
+    - "Missing, malformed, or unreachable input required by TEST_METRICS_PARSE_FAILED"
+    - Suite or image provisioning gap rather than a DUT hardware fault
+  capture:
+    - suite_run_url
+    - "failing test case(s): IoStress, ExecBinaryTestCase"
+    - per-test log and transcript
+    - "unit_sn, bios/fw_version, harness_version, station_id, operator_id, timestamp"
+  repair_actions:
+    - {step: 1, who: "engineer", action: "Fix the station, image, or suite configuration; do NOT route the unit to rework.", retest: "affected_subset", est_time_min: 15, ticket_template: "ETCH"}
+  owner: supercomputing-sw
+  doc_url: https://docs.google.com/document/d/1-_YC_cXvi3FtKd51jIetY9pER8JtCxH5dBE9UvndZWU/edit
+  since: harness 2026.226
+  suspected_components: [HARNESS]
+  vendor_error_id: []
+  jira_component: ETCH / l10-test
+- error_code: TH-HAR-0007
+  name: TEST_OUTPUT_UNAVAILABLE
+  version: 1
+  category: 7  # CATEGORY_SOFTWARE
+  severity: 4  # ERROR_TRIAGE
+  quick_action: 9  # QA_ESCALATE
+  component: L10.HAR.HARNESS
+  test_cases: [StoreSystemLogStates, CheckSystemLogStates, ExecBinaryTestCase]
+  disposition: ERROR
+  retryable: false
+  max_auto_retry: 0
+  description: >
+    Expected test output, state, or result artifacts were not produced.
+  probable_causes:
+    - "Test-system, station, or configuration problem covering Harness"
+    - "Missing, malformed, or unreachable input required by TEST_OUTPUT_UNAVAILABLE"
+    - Suite or image provisioning gap rather than a DUT hardware fault
+  capture:
+    - suite_run_url
+    - "failing test case(s): StoreSystemLogStates, CheckSystemLogStates, ExecBinaryTestCase"
+    - per-test log and transcript
+    - "unit_sn, bios/fw_version, harness_version, station_id, operator_id, timestamp"
+  repair_actions:
+    - {step: 1, who: "engineer", action: "Fix the station, image, or suite configuration; do NOT route the unit to rework.", retest: "affected_subset", est_time_min: 15, ticket_template: "ETCH"}
+  owner: supercomputing-sw
+  doc_url: https://docs.google.com/document/d/1-_YC_cXvi3FtKd51jIetY9pER8JtCxH5dBE9UvndZWU/edit
+  since: harness 2026.226
+  suspected_components: [HARNESS]
+  vendor_error_id: []
+  jira_component: ETCH / l10-test
+- error_code: TH-HAR-0008
+  name: TEST_PRECONDITION_NOT_MET
+  version: 1
+  category: 5  # CATEGORY_CONFIG
+  severity: 5  # ERROR_CONFIG
+  quick_action: 9  # QA_ESCALATE
+  component: L10.HAR.HARNESS
+  test_cases: [RunInStress, IoStress, NetworkBwRdmaTest]
+  disposition: ERROR
+  retryable: false
+  max_auto_retry: 0
+  description: >
+    A required test precondition was not satisfied, so the test did not exercise
+    the DUT as intended.
+  probable_causes:
+    - "Test-system, station, or configuration problem covering Harness"
+    - "Missing, malformed, or unreachable input required by TEST_PRECONDITION_NOT_MET"
+    - Suite or image provisioning gap rather than a DUT hardware fault
+  capture:
+    - suite_run_url
+    - "failing test case(s): RunInStress, IoStress, NetworkBwRdmaTest"
+    - per-test log and transcript
+    - "unit_sn, bios/fw_version, harness_version, station_id, operator_id, timestamp"
+  repair_actions:
+    - {step: 1, who: "engineer", action: "Fix the station, image, or suite configuration; do NOT route the unit to rework.", retest: "affected_subset", est_time_min: 15, ticket_template: "ETCH"}
+  owner: supercomputing-sw
+  doc_url: https://docs.google.com/document/d/1-_YC_cXvi3FtKd51jIetY9pER8JtCxH5dBE9UvndZWU/edit
+  since: harness 2026.226
+  suspected_components: [HARNESS]
+  vendor_error_id: []
+  jira_component: ETCH / l10-test
+- error_code: TH-HAR-0009
+  name: TEST_CLEANUP_FAILED
+  version: 1
+  category: 7  # CATEGORY_SOFTWARE
+  severity: 4  # ERROR_TRIAGE
+  quick_action: 9  # QA_ESCALATE
+  component: L10.HAR.HARNESS
+  test_cases: [LoopbackTopologyTest, NetworkBwRdmaTest, FreeModelRegistryFromShmTestCase, FreeWeightsTestCase]
+  disposition: ERROR
+  retryable: false
+  max_auto_retry: 0
+  description: >
+    Test cleanup failed and may have left processes, mounts, namespaces, files,
+    or device state behind.
+  probable_causes:
+    - "Test-system, station, or configuration problem covering Harness"
+    - "Missing, malformed, or unreachable input required by TEST_CLEANUP_FAILED"
+    - Suite or image provisioning gap rather than a DUT hardware fault
+  capture:
+    - suite_run_url
+    - "failing test case(s): LoopbackTopologyTest, NetworkBwRdmaTest, FreeModelRegistryFromShmTestCase, FreeWeightsTestCase"
+    - per-test log and transcript
+    - "unit_sn, bios/fw_version, harness_version, station_id, operator_id, timestamp"
+  repair_actions:
+    - {step: 1, who: "engineer", action: "Fix the station, image, or suite configuration; do NOT route the unit to rework.", retest: "affected_subset", est_time_min: 15, ticket_template: "ETCH"}
+  owner: supercomputing-sw
+  doc_url: https://docs.google.com/document/d/1-_YC_cXvi3FtKd51jIetY9pER8JtCxH5dBE9UvndZWU/edit
+  since: harness 2026.226
+  suspected_components: [HARNESS]
+  vendor_error_id: []
+  jira_component: ETCH / l10-test
+- error_code: TH-HAR-9998
+  name: TEST_FAILED_UNCLASSIFIED
+  version: 1
+  category: 0  # CATEGORY_NONE — uncategorized by definition
+  severity: 3  # ERROR_UNKNOWN — catch-all; triage as a taxonomy gap
+  quick_action: 0  # QA_NO_ACT
+  component: L10.HAR.HARNESS
+  test_cases: []  # harness-level; applies to any test case
+  disposition: FAILED  # the test itself signaled a DUT failure
+  retryable: false
+  max_auto_retry: 0
+  description: >
+    Catch-all - a test case failed (raised TestFailedError) without carrying
+    a specific TH error code. Frequent sources should be migrated to
+    dedicated codes (spec §9 taxonomy-health metric).
+  probable_causes:
+    - Test case not yet migrated to specific TH error codes
+  capture:
+    - suite_run_url
+    - per-test log and transcript
+    - harness_version, station_id, operator_id, timestamp
+  repair_actions:
+    - {step: 1, who: operator, action: "Follow the failing test case's own documentation/SOP.", retest: affected_subset, est_time_min: 10}
+    - {step: 2, who: escalate, action: "Open a taxonomy-gap ticket to allocate a specific code for this failure mode.", retest: n/a, ticket_template: ETCH}
+  owner: supercomputing-sw
+  doc_url: https://github.com/etched-ai/sw/blob/master/host/system_test/error_codes/doc/Harness.md#TH-HAR-9998
+  since: harness 2026.216
+  suspected_components: []
+  vendor_error_id: []
+  jira_component: ETCH / l10-test
+- error_code: TH-HAR-9999
+  name: UNHANDLED_EXCEPTION
+  version: 1
+  category: 7  # CATEGORY_SOFTWARE
+  severity: 3  # ERROR_UNKNOWN — catch-all (spec §3, §11.2.2)
+  quick_action: 9  # QA_ESCALATE
+  component: L10.HAR.HARNESS
+  test_cases: []  # harness-level; applies to any test case
+  disposition: ERROR  # test-system problem; excluded from DUT yield
+  retryable: false
+  max_auto_retry: 0
+  description: >
+    Unhandled exception during test execution, wrapped by the harness
+    (spec §11.2.2). The traceback is preserved in the per-test log.
+  probable_causes:
+    - Bug in the test case or harness code
+    - Unexpected environment state the test does not handle
+  capture:
+    - suite_run_url
+    - per-test log with full traceback
+    - harness_version, station_id, operator_id, timestamp
+  repair_actions:
+    - {step: 1, who: operator, action: "Collect the suite/test logs and artifacts for this failure.", est_time_min: 5}
+    - {step: 2, who: escalate, action: "Escalate to Etched engineer with the collected logs and traceback; do NOT route the unit to rework or FA.", ticket_template: ETCH}
+  owner: supercomputing-sw
+  doc_url: https://github.com/etched-ai/sw/blob/master/host/system_test/error_codes/doc/Harness.md#TH-HAR-9999
+  since: harness 2026.216
+  suspected_components: []
+  vendor_error_id: []
+  jira_component: ETCH / l10-test
+- error_code: TH-PWR-0001
+  name: STATION_PSU_LOAD_IMBALANCE
+  version: 1
+  category: 6  # CATEGORY_HARDWARE
+  severity: 4  # ERROR_TRIAGE
+  quick_action: 2  # QA_WARM_REBOOT — targets the fixture, not the DUT (spec §6)
+  component: 1X.PWR.STATION_PSU
+  test_cases: [CheckPsuHealth]
+  disposition: ERROR  # test-system problem; excluded from module yield
+  retryable: false
+  max_auto_retry: 0
+  description: >
+    Station PSU load imbalance above 5% or PGOOD failure (fixture problem;
+    excluded from module yield).
+  probable_causes:
+    - Dev-kit chassis PSU degradation or imbalance
+    - Station power cabling problem
+  capture:
+    - suite_run_url
+    - per-test log and transcript
+    - unit_sn, fw_version, harness_version, station_id, operator_id, timestamp
+  repair_actions:
+    - {step: 1, who: operator, action: "Known Devkit intermittent issue, retest once.", retest: affected_subset, est_time_min: 10}
+  owner: supercomputing-sw
+  doc_url: https://github.com/etched-ai/sw/blob/master/host/system_test/error_codes/doc/CheckPsuHealth.md#TH-PWR-0001
+  since: harness 2026.216
+  suspected_components: []
+  vendor_error_id: []
+  jira_component: ETCH / l10-test
